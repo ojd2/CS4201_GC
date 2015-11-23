@@ -172,8 +172,8 @@ console.log(Int_const);
 
 // Object 'Bool_const_false' is allocated at address 4 
 // This becomes 'reachable' from the object 'Int_const'
-var Bool_const_false = alloc({e: false});
-a.Bool_const_false = Bool_const_false['address'];
+var Bool_const_false = alloc_struct({e: false});
+Int_const.Bool_const_false = Bool_const_false['address'];
 // IMPORTANT: the object 'Bool_const_false' also has back-reference to 'Int_const':
 Bool_const_false.Int_const = Int_const['address'];
 console.log(Int_const);
@@ -234,9 +234,9 @@ function copyNewSpace(object) {
 	}
 	// Now mark the old object as copied:
 	object['forwardingAddress'] = ALLOC_POINTER;
-	// Put on the heap (which increases the alloc pointer).
-  	alloc(newObject);
-	return newObject;
+	// Put on the heap (which increases the alloc_struct pointer).
+  	alloc_struct(newCopiedObject);
+	return newCopiedObject;
 }
 
 // Now let's set up a function to check if value is an address:
@@ -258,18 +258,18 @@ function gc_sc() {
   // Let's copy it to the young generation, by automatically increasing the 
   // allocation pointer, but still keeping the scan pointer at its position.
 
-  var copiedA = copyToNewSpace(Int_const);
-  Int_const['forwardingAddress'] = copiedInt_const['address'];
+  var copiedA = copyNewSpace(Int_const);
+  Int_const['forwardingAddress'] = copiedA['address'];
 
   // From this, we have now differentiated our scanner and allocation pointers.
   // For now we have only the 'Int_const' object. During our scanning, we copy all 
   // these sub-objects and mark them as copied too (set the "forwarding address" flag).
 
-while (SCANNER_POINTER != ALLOCATION_POINTER) { 
+while (SCANNER_POINTER != ALLOC_POINTER) { 
   	// Get the next object within our Scanner pointer:
     var nextObjectScan = heap[SCANNER_POINTER];
   	// Begin a simple traversal algorithm, checking all its reference properties
-    for (var p1 in nextObjectScan) if (isPointer(p1, nextObjectScan[p1])) {
+    for (var p1 in nextObjectScan) if (isAddressPointer(p1, nextObjectScan[p1])) {
       
       var address = nextObjectScan[p1];
       // Get the object to which this reference points to:
@@ -279,7 +279,7 @@ while (SCANNER_POINTER != ALLOCATION_POINTER) {
       if (!('forwardingAddress' in objectAtAddress)) {
 
         // Then we copy this sub-object too and mark it specifying forwarding address.
-        var copiedObjectAtAddress = copyToNewSpace(objectAtAddress);
+        var copiedObjectAtAddress = copyNewSpace(objectAtAddress);
 
         // And we also *fix* the pointer value on the scanning object to
         // refer to the new location.
@@ -307,7 +307,7 @@ while (SCANNER_POINTER != ALLOCATION_POINTER) {
   	}
 
   	var tmp = YOUNG_GENERATION_BOUND;
-  	YOUNG_GENERATION_BOUND = OLD_SPACE_BOUND; // 0
+  	YOUNG_GENERATION_BOUND = OLD_GENERATION_BOUND; // 0
   	OLD_GENERATION_BOUND = tmp; // 5
 
 
