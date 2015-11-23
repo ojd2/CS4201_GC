@@ -157,7 +157,6 @@ console.log(Bool_const_true);
 delete Int_const['Bool_const_true'];
 console.log(Int_const);
 
-
 // Object "String_const_short" is allocated at address 3
 // The object is 'reachable' from 'String_const_long' 
 // (which in turn is reachable from:
@@ -425,13 +424,29 @@ function generation(object, array) {
     return array;
 }
 
-
+// ---------------------------------------------------------------------------
+// 6. Generation Tests and Re-assignments
+// ---------------------------------------------------------------------------
 // Show results of our new generation_objects object:
 // Callback our generation function upon the manipulated heap,
 // takes the parameters of both the object(heap), and desired generational
 // array space (G_0,G_1, G_2);
 console.log('PUSH INTO G_0: ' + objectToString(heap));
 generation(heap, G_0);
+
+
+// As it seems, the gc_sc() function is just running ontop of the manipulated heap.
+// Best bet is taking the manipulated heap and using some reassignment logic as we
+// did at the top of the program. As this is an abstracted representation of a GGC,
+// making JavaScript do all our systematic work is quite tricky. 
+
+// Begin another re-assignment of variables and addresses on the current heap.
+// Perform another gc_sc() upon new assignments and see what the results are.
+// Hopefully, less objects than previous. 
+// If so, store the objects into G_0.
+
+// Repeat steps until you fill up G_1, G_2.
+
 gc_sc();
 console.log('PUSH INTO G_1: ' + objectToString(heap));
 generation(heap, G_1);
