@@ -427,15 +427,18 @@ function generation(object, array) {
 // ---------------------------------------------------------------------------
 // 6. Generation Tests and Re-assignments
 // ---------------------------------------------------------------------------
-// Show results of our new generation_objects object:
+// Show results of our new array objects:
 // Callback our generation function upon the manipulated heap,
 // takes the parameters of both the object(heap), and desired generational
 // array space (G_0,G_1, G_2);
-console.log('PUSH INTO G_0: ' + objectToString(heap));
+console.log('PERFORM AND PUSH HEAP ONTO G_0.');
 generation(heap, G_0);
+console.log('G_0 RESULTS:' + '\n\n' + objectToString(G_0));
 
 
 // As it seems, the gc_sc() function is just running ontop of the manipulated heap.
+// There seems to be 1 index being added, 11 is being added to another index, each
+// time the gc_sc() is being called...?
 // Best bet is taking the manipulated heap and using some reassignment logic as we
 // did at the top of the program. As this is an abstracted representation of a GGC,
 // making JavaScript do all our systematic work is quite tricky. 
@@ -446,7 +449,21 @@ generation(heap, G_0);
 // If so, store the objects into G_0.
 
 // Repeat steps until you fill up G_1, G_2.
+console.log('REARRANGE HEAP');
+console.log('PERFORM GC_SC ALGORITHM');
 
 gc_sc();
-console.log('PUSH INTO G_1: ' + objectToString(heap));
+
+console.log('PERFORM AND PUSH HEAP ONTO G_1.');
 generation(heap, G_1);
+console.log('G_1 RESULTS:' + '\n\n' + objectToString(G_1));
+
+// Repeat steps until you fill up G_1, G_2.
+console.log('REARRANGE HEAP');
+console.log('PERFORM GC_SC ALGORITHM');
+
+gc_sc();
+
+console.log('PERFORM AND PUSH HEAP ONTO G_2.');
+generation(heap, G_2);
+console.log('G_2 RESULTS:' + '\n\n' + objectToString(G_2));
