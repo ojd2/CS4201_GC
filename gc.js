@@ -97,13 +97,20 @@ var heap = Array(20); // heap of size 20
 // for this purpose. Therefore, many generational GC's use separate memory regions
 // for different ages of objects.
 
-var OLD_GENERATION_BOUND = 0; // current old generation (working) space.
-var YOUNG_GENERATION_BOUND = 10; // start of the young generation space.
+// Current old generation (working) space.
+var OLD_GENERATION_BOUND = 0; 
+// Start of the young generation space.
+var YOUNG_GENERATION_BOUND = 10; 
+// Spaces for the generation objects to be passed after GC.
+var G_0 = {};
+var G_1 = {};
+var G_2 = {};
 
 console.log(OLD_GENERATION_BOUND);
 console.log(YOUNG_GENERATION_BOUND);
 
-// Initially the allocation pointer is set to the beginning of the old generation (to zero).
+// Initially the allocation pointer is set to the beginning of 
+// the old generation (to zero).
 var ALLOC_POINTER = OLD_GENERATION_BOUND;
 
 // Set up a function which denotes allocation of various objects. 
@@ -306,18 +313,12 @@ function gc_sc() {
   	YOUNG_GENERATION_BOUND = OLD_GENERATION_BOUND;
   	// Reset = 5 objects
   	OLD_GENERATION_BOUND = store;
-  
-  	
-    
-
-  
-
 
 } // End gc_sc();
 
 
 // ---------------------------------------------------------------------------
-// 4. Pretty Print Our Results.
+// 4. Pretty Print Our Results So Far.
 // ---------------------------------------------------------------------------
 // Set up a function to convert our objects in the heap stack to a nice looking
 // pretty print. For now, we will convert our outputs using a small function which
@@ -367,9 +368,8 @@ gc_sc();
 // address of 'Int_const' on 'Bool_const_false' is 10.
 console.log('HEAP AFTER GC_SC:' + '\n\n', objectToString(heap));
 
-
 // ---------------------------------------------------------------------------
-// 5. Mechanism to copy the newly assigned live data
+// 5. Mechanism To Copy The Newly Assigned Live Data Into Generations
 // ---------------------------------------------------------------------------
 
 // We need a mechanism to copy the live data of one region of memory to a 
@@ -392,16 +392,15 @@ console.log('HEAP AFTER GC_SC:' + '\n\n', objectToString(heap));
 // objects are copied and compacted. This is where the "adaptive" part 
 // comes in, so you end up with a mouthful: "adaptive generational 
 // stop-and-copy."
-  
-
-function generation(object) {
-
-// This follows the same routine for the copyToNewSpace() above ^^
 
 // ALGORITHM:
+
 // Take objects of simillar age. This would be the state of our heap
 // after the GC_SC function has been called.
 // Objects containing simillar age : [heap]
+// Divide, objects, add to a generational space
+// Perform GC_SC algorithm, with each result, add to a new space.
+
 
 // 1 - Take all objects in [heap] (currently there will be)
 // 2 - Divide and segment objects from [heap]
@@ -411,32 +410,28 @@ function generation(object) {
 // NOTE TO SELF: Am I right in thinking that I need too run the gc_sc function 
 // within each G_0, G_1, G_2 etc.
 
-	var G_0 = [];
-	var G_1 = [];
-	var G_2 = [];
-	
-	// Pull elements from 
-	if (typeof(object) == "object" && (object.join == undefined)) {
+function generation(object, array) {
+	// Pull elements from heap and push into our array.
+	if (typeof(object) == "object") {
     	for (item in object) {
-        	G_0.push(item, ": ", generation(object[item]), "\n");
+    	   // Segment our heap items.
+          for (var i = 0; i < item.length;)
+            	// Then for each item push into array
+            	i++
+        		array[item] = object[item];
+      		}
     	};
-	}
-	// Next we look for items if it is an array: 
-	else if (typeof(object) == "object" && !(object.join == undefined)) {
-	    for(item in object) {
-	        G_0.push(generation(object[item]), "\n");
-	    }
-	} 
-	// If objects is a function
-	else if (typeof(object) == "function") {
-	    G_0.push(object.toString(), "\n");
-	} 
-	// For all other other values can be done with JSON.stringify
-	else {
-	    G_0.push(JSON.stringify(object), "\n");
-	}
-    // Return our results and values and join them simply to our G_0[]
-    return G_0.join("");
+    // Return our farray
+    return array;
 }
-console.log('Push into G_0:');
-generation(heap);
+
+
+// Show results of our new generation_objects object:
+// Callback our generation function upon the manipulated heap,
+// takes the parameters of both the object(heap), and desired generational
+// array space (G_0,G_1, G_2);
+console.log('PUSH INTO G_0: ' + objectToString(heap));
+generation(heap, G_0);
+gc_sc();
+console.log('PUSH INTO G_1: ' + objectToString(heap));
+generation(heap, G_1);
