@@ -248,7 +248,7 @@ function isAddressPointer(name, value) {
 }
 
 // ---------------------------------------------------------------------------
-// 3. Actual Stop & Copy GC algorithm.
+// 3. Start the 'Stop & Copy' GC Algorithm.
 // ---------------------------------------------------------------------------
 
 function gc_sc() {
@@ -257,7 +257,6 @@ function gc_sc() {
   // Therefore, we can do this by assigning our copyNewSpace(Int_const).
   // Let's copy it to the young generation, by automatically increasing the 
   // allocation pointer, but still keeping the scan pointer at its position.
-
   var copiedA = copyNewSpace(Int_const);
   Int_const['forwardingAddress'] = copiedA['address'];
 
@@ -265,39 +264,40 @@ function gc_sc() {
   // For now we have only the 'Int_const' object. During our scanning, we copy all 
   // these sub-objects and mark them as copied too (set the "forwarding address" flag).
 
-while (SCANNER_POINTER != ALLOC_POINTER) { 
-  	// Get the next object within our Scanner pointer:
-    var nextObjectScan = heap[SCANNER_POINTER];
-  	// Begin a simple traversal algorithm, checking all its reference properties
-    for (var p1 in nextObjectScan) if (isAddressPointer(p1, nextObjectScan[p1])) {
+	while (SCANNER_POINTER != ALLOC_POINTER) { 
+  		// Get the next object within our Scanner pointer:
+    	var nextObjectScan = heap[SCANNER_POINTER];
+  		// Begin a simple traversal algorithm, checking all its reference properties
+    	for (var p1 in nextObjectScan) if (isAddressPointer(p1, nextObjectScan[p1])) {
       
-      var address = nextObjectScan[p1];
-      // Get the object to which this reference points to:
-      var objectAtAddress = heap[address];
+     		var address = nextObjectScan[p1]; 
+     		// Get the object to which this reference points to:
+      		var objectAtAddress = heap[address];
 
-      // If that object hasn't been copied yet (i.e. hasn't forwarding address set)
-      if (!('forwardingAddress' in objectAtAddress)) {
+      		// If that object hasn't been copied yet (i.e. hasn't forwarding address set)
+        	if (!('forwardingAddress' in objectAtAddress)) {
 
-        // Then we copy this sub-object too and mark it specifying forwarding address.
-        var copiedObjectAtAddress = copyNewSpace(objectAtAddress);
+        	// Then we copy this sub-object too and mark it specifying forwarding address.
+        	var copiedObjectAtAddress = copyNewSpace(objectAtAddress);
 
-        // And we also *fix* the pointer value on the scanning object to
-        // refer to the new location.
-        nextObjectScan[p1] = copiedObjectAtAddress.address;
-      } 
-      	// Else, the object which this sub-property refers to, was already copied at
-      	// some previous scan of some other objects (an object can be referred by many
-      	// properties in different objects)
-      	else {
-        	// Then we just update the pointer to the forwarding address
-        	nextObjectScan[p1] = objectAtAddress.forwardingAddress;
-      	}
-    }
+        	// And we also need the pointer value on the scanning object to
+        	// refer to the new location.
+        	nextObjectScan[p1] = copiedObjectAtAddress.address;
+      		} 
+      		// Else, the object which this sub-property refers to, was already copied at
+      		// some previous scan of some other objects (an object can be referred by many
+      		// properties in different objects)
+      		else {
+        		// Then we just update the pointer to the forwarding address
+        		nextObjectScan[p1] = objectAtAddress.forwardingAddress;
+      		}
+    	}
 
-    // And then we move to the next object to scan (the sub-objects which were copied
-    // at scanning of their parent object, and which not scanned yet).
-    SCANNER_POINTER++;
- }
+    	// And then we move to the next object to scan (the sub-objects which were copied
+    	// at scanning of their parent object, and which not scanned yet).
+    	SCANNER_POINTER++;
+	}
+    
     // Now we can swap Old and New space, making the New space our working
     // runtime memory, and the Old space reserved for GC.
     for (var i = OLD_GENERATION_BOUND; i < YOUNG_GENERATION_BOUND; i++) {
@@ -307,22 +307,84 @@ while (SCANNER_POINTER != ALLOC_POINTER) {
   	}
 
   	var tmp = YOUNG_GENERATION_BOUND;
-  	YOUNG_GENERATION_BOUND = OLD_GENERATION_BOUND; // 0
-  	OLD_GENERATION_BOUND = tmp; // 5
+  	// Reset = 0
+  	YOUNG_GENERATION_BOUND = OLD_GENERATION_BOUND;
+  	// Reset = 5
+  	OLD_GENERATION_BOUND = tmp; 
+} // End gc_sc();
+
+
+// ---------------------------------------------------------------------------
+// 4. We Need More Generational Collection.
+// ---------------------------------------------------------------------------
+
+// Within the architecture of many programs, objects tend to die young.
+// Although the 'GC_SC' function above includes various elements of generational
+// collection using the traditional 'Stop and Copy' algorithm - there is another
+// alternative which we can use. The current Google Chrome V8 engine uses a 
+// JavaScript / C++ mechanisim for their system. They make use of a popular 
+// generational 'Scavenging' Algorithm by Prof. David Ungar. 
+
+// The V8 divides the heap into two generations, which is very much what we have
+// already proceeded with in our 'GC_SC' function. However, our allocation pointer 
+// which we increment whenever we want to assign and store space for a new object has
+// some particular design and implementation flaws (heuristically speaking). 
+// When the allocation pointer reaches the end of new space, a scavenge 
+// (minor garbage collection cycle) is triggered.
 
 
 
-} // End gc_sc()
 
+
+
+// ---------------------------------------------------------------------------
+// 5. Pretty Print Our Results.
+// ---------------------------------------------------------------------------
+// Set up a function to convert our objects in the heap stack to a nice looking
+// pretty print. For now, we will convert our outputs using a small function which
+// converts our objects to a string.
+function objectToString(object) {
+    // Empty string array which will allow us to append our objects
+    var empty_string = [];
+
+    // Our heap is an array of objects. Therefore, the function below searches for
+    // typeof 'object' and pushes elements into our empty_string[] array.
+    // This is done first:
+    if (typeof(object) == "object" && (object.join == undefined)) {
+    	for (prop in object) {
+        	empty_string.push(prop, ": ", objectToString(object[prop]));
+    	};
+	}
+	// Next we look for items if it is an array: 
+	else if (typeof(object) == "object" && !(object.join == undefined)) {
+	    for(prop in object) {
+	        empty_string.push(objectToString(object[prop]));
+	    }
+	} 
+	// If objects is a function
+	else if (typeof(object) == "function") {
+	    empty_string.push(object.toString());
+	} 
+	// For all other other values can be done with JSON.stringify
+	else {
+	    empty_string.push(JSON.stringify(object));
+	}
+    // Return our results and values and join them simply to our empty_string[]
+    return empty_string.join("");
+}
 // Before we console log some results...
 // Notice, that the address of 'Bool_const_false' in the 'Int_const' object is 4, and
 // the back-reference address of 'Int_const' on 'Bool_const_false' is 0.
 // Let's show some implementated results:
-console.log('Heap before GC:', heap);
+console.log('Heap before GC_SC:' + '\n', objectToString(heap));
 // Now let's run the GC algorithm:
 gc_sc();
 // Now let's show some implemented results with the GC algorithm:
 // Notice, that the address of 'Bool_const_false' object in the 'Int_const' is correctly
 // updated to the new location, 11, and the the back-reference
 // address of 'Int_const' on 'Bool_const_false' is 10.
-console.log('Heap after GC:', heap);
+console.log('Heap after GC_SC:' + '\n', objectToString(heap));
+
+
+
+
