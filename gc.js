@@ -227,9 +227,9 @@ var SCANNER_POINTER = ALLOC_POINTER;
 function copyNewSpace(object) {
 	// Now copy empty {}
 	var newCopiedObject = {};
-	for (var prop in object) {
-		if (prop != 'address' && prop != 'forwardingAddress') {
-      		newCopiedObject[prop] = object[prop];
+	for (var item in object) {
+		if (item != 'address' && item != 'forwardingAddress') {
+      		newCopiedObject[item] = object[item];
     	}
 	}
 	// Now mark the old object as copied:
@@ -274,7 +274,7 @@ function gc_sc() {
      		// Get the object to which this reference points to:
       		var objectAtAddress = heap[address];
 
-      		// If that object hasn't been copied yet (i.e. hasn't forwarding address set)
+      		// If that object hasn't been copied yet (i.e. has no forwarding address set)
         	if (!('forwardingAddress' in objectAtAddress)) {
         	// Then we copy this sub-object as well and mark it specifying 'forwardingAddress'.
         	var copiedObjectAtAddress = copyNewSpace(objectAtAddress);
@@ -309,46 +309,15 @@ function gc_sc() {
   
   	
     
-// ---------------------------------------------------------------------------
-// 3. Mechanism to copy the newly assigned live data
-// ---------------------------------------------------------------------------
 
-// We need a mechanism to copy the live data of one region of memory to a 
-// contiguous group of records in another region.
-
-// This can be done without an auxiliary stack or queue; using the 'Cheney' 
-// algorithm, which uses the destination region as the queue of a BF search:
-
-// Strict stop-and-copy requires copying every live object from the source 
-// heap to a new heap before you could free the old one, which translates 
-// to lots of memory. With blocks, the GC can typically use dead blocks to 
-// copy objects to as it collects. Each block has a generation count to keep
-// track of whether it's alive. In the normal case, only the blocks created 
-// since the last GC are compacted; all other blocks get their generation 
-// count bumped if they have been referenced from somewhere. 
-
-// This handles the normal case of lots of short-lived temporary objects. 
-// Periodically, a full sweep is made - large objects are still not copied
-// (just get their generation count bumped) and blocks containing small 
-// objects are copied and compacted. This is where the "adaptive" part 
-// comes in, so you end up with a mouthful: "adaptive generational 
-// stop-and-copy."
-	
-  console.log('\n' + 'Live objects:' + store + '\n');
-  
   
 
 
 } // End gc_sc();
 
 
-
-
-
-
-
 // ---------------------------------------------------------------------------
-// 5. Pretty Print Our Results.
+// 4. Pretty Print Our Results.
 // ---------------------------------------------------------------------------
 // Set up a function to convert our objects in the heap stack to a nice looking
 // pretty print. For now, we will convert our outputs using a small function which
@@ -361,14 +330,14 @@ function objectToString(object) {
     // typeof 'object' and pushes elements into our empty_string[] array.
     // This is done first:
     if (typeof(object) == "object" && (object.join == undefined)) {
-    	for (prop in object) {
-        	empty_string.push(prop, ": ", objectToString(object[prop]), "\n");
+    	for (item in object) {
+        	empty_string.push(item, ": ", objectToString(object[item]), "\n");
     	};
 	}
 	// Next we look for items if it is an array: 
 	else if (typeof(object) == "object" && !(object.join == undefined)) {
-	    for(prop in object) {
-	        empty_string.push(objectToString(object[prop]), "\n");
+	    for(item in object) {
+	        empty_string.push(objectToString(object[item]), "\n");
 	    }
 	} 
 	// If objects is a function
@@ -397,3 +366,77 @@ gc_sc();
 // updated to the new location, 11, and the the back-reference
 // address of 'Int_const' on 'Bool_const_false' is 10.
 console.log('HEAP AFTER GC_SC:' + '\n\n', objectToString(heap));
+
+
+// ---------------------------------------------------------------------------
+// 5. Mechanism to copy the newly assigned live data
+// ---------------------------------------------------------------------------
+
+// We need a mechanism to copy the live data of one region of memory to a 
+// contiguous group of records in another region.
+
+// This can be done without an auxiliary stack or queue; using the 'Cheney' 
+// algorithm, which uses the destination region as the queue of a BF search:
+
+// Strict stop-and-copy requires copying every live object from the source 
+// heap to a new heap before you could free the old one, which translates 
+// to lots of memory. With blocks, the GC can typically use dead blocks to 
+// copy objects to as it collects. Each block has a generation count to keep
+// track of whether it's alive. In the normal case, only the blocks created 
+// since the last GC are compacted; all other blocks get their generation 
+// count bumped if they have been referenced from somewhere. 
+
+// This handles the normal case of lots of short-lived temporary objects. 
+// Periodically, a full sweep is made - large objects are still not copied
+// (just get their generation count bumped) and blocks containing small 
+// objects are copied and compacted. This is where the "adaptive" part 
+// comes in, so you end up with a mouthful: "adaptive generational 
+// stop-and-copy."
+  
+
+function generation(object) {
+
+// This follows the same routine for the copyToNewSpace() above ^^
+
+// ALGORITHM:
+// Take objects of simillar age. This would be the state of our heap
+// after the GC_SC function has been called.
+// Objects containing simillar age : [heap]
+
+// 1 - Take all objects in [heap] (currently there will be)
+// 2 - Divide and segment objects from [heap]
+// 3 - Push all objects in [heap] into our first generation: G0.
+// 3 - Push objects into older g1, g2 as they survive successive collection cycles.
+
+// NOTE TO SELF: Am I right in thinking that I need too run the gc_sc function 
+// within each G_0, G_1, G_2 etc.
+
+	var G_0 = [];
+	var G_1 = [];
+	var G_2 = [];
+	
+	// Pull elements from 
+	if (typeof(object) == "object" && (object.join == undefined)) {
+    	for (item in object) {
+        	G_0.push(item, ": ", generation(object[item]), "\n");
+    	};
+	}
+	// Next we look for items if it is an array: 
+	else if (typeof(object) == "object" && !(object.join == undefined)) {
+	    for(item in object) {
+	        G_0.push(generation(object[item]), "\n");
+	    }
+	} 
+	// If objects is a function
+	else if (typeof(object) == "function") {
+	    G_0.push(object.toString(), "\n");
+	} 
+	// For all other other values can be done with JSON.stringify
+	else {
+	    G_0.push(JSON.stringify(object), "\n");
+	}
+    // Return our results and values and join them simply to our G_0[]
+    return G_0.join("");
+}
+console.log('Push into G_0:');
+generation(heap);
