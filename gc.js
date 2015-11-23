@@ -123,62 +123,206 @@ function alloc_struct(object) {
 }
 
 // Let's add some 'boxed' objects onto the heap.
-// Object 'Int_const' is allocated at address 0 and is reachable
-// from the 'root' index:
+// Object 'Int_const' is allocated at address 0
+// This object is now 'reachable' from the 'root' index:
 var Int_const = alloc_struct({a: 10});
 console.log(Int_const);
 
-// Object "String_const_long" is allocated at address 1 and is reachable
-// from "Int_const" object:
+// Object 'String_const_long' is allocated at address 1
+// This object is now 'reachable' from the 'Int_const' object:
 var String_const_long = alloc_struct({b: 'Dictionary'});
-// address (array index) where "String_const_long" is allocated on the heap:
+// The allocation uses the address (array index) 
+// where "String_const_long" is allocated on the heap:
 Int_const['String_const_long'] = String_const_long['address']; 
 console.log(String_const_long);
 
-// Object "Bool_const_true" is allocated at address 2 and is also 
-// reachable from "Int_const": root -> Int_const -> Bool_const_true
+// Object "Bool_const_true" is allocated at address 2
+// The object is now 'reachable' from "Int_const": 
+// e.g = root -> Int_const -> Bool_const_true
 var Bool_const_true = alloc_struct({c: true});
-// address (array index) where "Bool_const_true" is allocated on the heap:
+// The allocation uses the address (array index) where "Bool_const_true"
+// is allocated on the heap as follows:
 Int_const['Bool_const_true'] = Bool_const_true['address']; 
 console.log(Bool_const_true);
 
-// However, later it's reference from "Int_const" is removed.
-// Now "Bool_const_true" is a candidate for GC.
+// Now, let us delete the 'Bool_const_true' reference from 'Int_const'
+// Now 'Bool_const_true' is 'unreachable' and subsequently becomes a candidate for GC.
 delete Int_const['Bool_const_true'];
 console.log(Int_const);
 
 
-// Object "String_const_short" is allocated at address 3 and is reachable from "String_const_long" (which in turn is
-// reachable from "Int_const": root -> Int_const -> String_const_long -> String_const_short
+// Object "String_const_short" is allocated at address 3
+// The object is 'reachable' from 'String_const_long' 
+// (which in turn is reachable from:
+// 'Int_const': root -> Int_const -> String_const_long -> String_const_short
 var String_const_short = alloc_struct({d: 'Hello'});
-// Like String_const_long.String_const_short = String_const_short in JS
 String_const_long['String_const_short'] = String_const_short['address']; 
 
-// But then the "String_const_long" reference is removed from "Int_const".
+// But then the 'String_const_long' object reference is removed from 'Int_const'.
 delete Int_const['String_const_long'];
 console.log(Int_const);
 
-// This means that "String_const_short" still has the reference to it from "String_const_long", 
-// but it's not reachable (since the "b" itself is not reachable anymore).
-// root: -> Int_const --X--> String_const_long -> String_const_short
+// Yet, let us not forget that 'String_const_short' still has the reference to it
+// from "String_const_long", but it's not reachable (since the "b" itself is not reachable anymore).
+// e.g = root: -> Int_const --//--> String_const_long -> String_const_short
 
-// Notice the important point: that an object has some references to it
-// doesn't mean it cannot be GC'ed. The criteria is "reachability", but not the
+// REMEMBER: that even when an object has some references to it, it doesn't
+// mean it cannot be GC'ed. The criteria is "reachability", but not the
 // reference counting here.
 
-// Object "Bool_const_false" is allocated at address 4 and is reachable from "Int_const"
+// Object 'Bool_const_false' is allocated at address 4 
+// This becomes 'reachable' from the object 'Int_const'
 var Bool_const_false = alloc({e: false});
 a.Bool_const_false = Bool_const_false['address'];
-// And "Bool_const_false" also has back-reference to "Int_const".
+// IMPORTANT: the object 'Bool_const_false' also has back-reference to 'Int_const':
 Bool_const_false.Int_const = Int_const['address'];
 console.log(Int_const);
 
-// After these various assignments and deletions, the heap still contains five objects:
-// [{Inst_const}, {String_const_long}, {Bool_const_true}, {String_const_short}, 
-// {Bool_const_false}], but only "Inst_const" and "Bool_const_false" objects are reachable
-// (this starting from the root, the "Inst_const" object).
+// After various assignments and deletions, the passing of 'reachable' to 'unreachable', 
+// the heap still contains five objects:
+// Inst_const = a, String_const_long = b, Bool_const_true = c, String_const_short = d, 
+// Bool_const_false = e, but remember, only the objects 
+// 	- Inst_const 
+//	- Bool_const_false 
+// are now 'reachable' on the heap starting from the root index.
 
 // ---------------------------------------------------------------------------
-// 2. Stop and Copy GC overall algorithm
+// 2. Stop and Copy GC, Fixing Pointer Issue and Fowarding Pointers
 // ---------------------------------------------------------------------------
 
+// In this moving Stop and Copy GC, all memory is divided into a "from space" and "to space".
+// This particular program has allocated these partitions as young generation & old generation. 
+// Initially, objects are allocated into a 'to space' until the space becomes full. 
+// Next, a GC algorithm is triggered, below we highlight the Stop and Copy GC algorithm 
+// which is a more redefined 'mark and sweep' algorithm.  
+
+// Abstractly, there doesn't need to be any bit-for-bit copy inclusion. 
+// Bit-for-bit inclusion would enable us to assign more detailed references.
+// Because of this, there will be copying issues. As our abstract representation 
+// does not cater for more precise references, therefore some properties of 
+// objects may be referencing to other objects. 
+
+// So after the copying we should try adjust all pointers and their objects to
+// point to the new space where the objects were copied.
+// A technique which may help us to solve this issue is a 'Forwarding Addresses'.
+// This technique contains a special marker value which we can put on the object when copy it.
+
+// At runtime, we can assign and mark the copied objects more efficiently 
+// by forwarding addresses. This will update any other objects and their pointers 
+// incrementally and we can denote markers accordingly by dividing the young generation 
+// into three parts: 
+// 	- Copied & Scanned objects *
+// 	- Just copied objects *
+// 	- And the Free space *
+
+// Our new allocation pointers are set to the boundary of the
+// 'old generation' and 'young generation' (that is, to the middle of our heap array).
+
+// Allocate from the young generation now at GC:
+ALLOC_POINTER = YOUNG_GENERATION_BOUND;
+// And the Scanner pointer is set initially here too:
+var SCANNER_POINTER = ALLOC_POINTER;
+
+// Now let's set up a function to connect objects to their new locations.
+function copyNewSpace(object) {
+	// Now copy empty {}
+	var newCopiedObject = {};
+	for (var prop in object) {
+		if (prop != 'address' && prop != 'forwardingAddress') {
+      		newCopiedObject[prop] = object[prop];
+    	}
+	}
+	// Now mark the old object as copied:
+	object['forwardingAddress'] = ALLOC_POINTER;
+	// Put on the heap (which increases the alloc pointer).
+  	alloc(newObject);
+	return newObject;
+}
+
+// Now let's set up a function to check if value is an address:
+// For abstraction the function and algorithm usees simplified versioning.
+// We take the address in the heap array using its index (which are numbers). 
+// E.g. Int_const.String_const_long = 1.
+function isAddressPointer(name, value) {
+  return typeof value == 'number' && name != 'address' && name != 'forwardingAddress';
+}
+
+// ---------------------------------------------------------------------------
+// 3. Actual Stop & Copy GC algorithm.
+// ---------------------------------------------------------------------------
+
+function gc_sc() {
+  // Firstly, we must copy 'root' objects to the 'young generation'. 
+  // We only have one reachable object here and that is the 'Int_const' object.
+  // Therefore, we can do this by assigning our copyNewSpace(Int_const).
+  // Let's copy it to the young generation, by automatically increasing the 
+  // allocation pointer, but still keeping the scan pointer at its position.
+
+  var copiedA = copyToNewSpace(Int_const);
+  Int_const['forwardingAddress'] = copiedInt_const['address'];
+
+  // From this, we have now differentiated our scanner and allocation pointers.
+  // For now we have only the 'Int_const' object. During our scanning, we copy all 
+  // these sub-objects and mark them as copied too (set the "forwarding address" flag).
+
+while (SCANNER_POINTER != ALLOCATION_POINTER) { 
+  	// Get the next object within our Scanner pointer:
+    var nextObjectScan = heap[SCANNER_POINTER];
+  	// Begin a simple traversal algorithm, checking all its reference properties
+    for (var p1 in nextObjectScan) if (isPointer(p1, nextObjectScan[p1])) {
+      
+      var address = nextObjectScan[p1];
+      // Get the object to which this reference points to:
+      var objectAtAddress = heap[address];
+
+      // If that object hasn't been copied yet (i.e. hasn't forwarding address set)
+      if (!('forwardingAddress' in objectAtAddress)) {
+
+        // Then we copy this sub-object too and mark it specifying forwarding address.
+        var copiedObjectAtAddress = copyToNewSpace(objectAtAddress);
+
+        // And we also *fix* the pointer value on the scanning object to
+        // refer to the new location.
+        nextObjectScan[p1] = copiedObjectAtAddress.address;
+      } 
+      	// Else, the object which this sub-property refers to, was already copied at
+      	// some previous scan of some other objects (an object can be referred by many
+      	// properties in different objects)
+      	else {
+        	// Then we just update the pointer to the forwarding address
+        	nextObjectScan[p1] = objectAtAddress.forwardingAddress;
+      	}
+    }
+
+    // And then we move to the next object to scan (the sub-objects which were copied
+    // at scanning of their parent object, and which not scanned yet).
+    SCANNER_POINTER++;
+ }
+    // Now we can swap Old and New space, making the New space our working
+    // runtime memory, and the Old space reserved for GC.
+    for (var i = OLD_GENERATION_BOUND; i < YOUNG_GENERATION_BOUND; i++) {
+    	// Just clean old space for the debug purpose. In real practice it's not
+    	// necessary, this addresses can be just overridden by later allocations.
+    	delete heap[i];
+  	}
+
+  	var tmp = YOUNG_GENERATION_BOUND;
+  	YOUNG_GENERATION_BOUND = OLD_SPACE_BOUND; // 0
+  	OLD_GENERATION_BOUND = tmp; // 5
+
+
+
+} // End gc_sc()
+
+// Before we console log some results...
+// Notice, that the address of 'Bool_const_false' in the 'Int_const' object is 4, and
+// the back-reference address of 'Int_const' on 'Bool_const_false' is 0.
+// Let's show some implementated results:
+console.log('Heap before GC:', heap);
+// Now let's run the GC algorithm:
+gc_sc();
+// Now let's show some implemented results with the GC algorithm:
+// Notice, that the address of 'Bool_const_false' object in the 'Int_const' is correctly
+// updated to the new location, 11, and the the back-reference
+// address of 'Int_const' on 'Bool_const_false' is 10.
+console.log('Heap after GC:', heap);
