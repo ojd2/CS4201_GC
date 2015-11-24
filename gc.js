@@ -80,7 +80,6 @@
 
 var heap = Array(20); // heap of size 20
 
-
 // Now we can implment our heap division. The heap is divided into two spaces 
 // for our objects to be assigned in. The old generation is where our <current objects> live. 
 // The young generation in contrast is initially reserved for GC needs.
@@ -129,68 +128,71 @@ function alloc_struct(object) {
 	return object;
 }
 
+
+// ---------------------------------------------------------------------------
+// 1.1 Root Heap[0] Representation
+// ---------------------------------------------------------------------------
+
 // Let's add some 'boxed' objects onto the heap.
-// Object 'Int_const' is allocated at address 0
+// Object 'integer' is allocated at address 0
 // This object is now 'reachable' from the 'root' index:
-var Int_const = alloc_struct({a: 10});
-console.log(Int_const);
+var integer = alloc_struct({a: 10});
+console.log(integer);
 
-// Object 'String_const_long' is allocated at address 1
-// This object is now 'reachable' from the 'Int_const' object:
-var String_const_long = alloc_struct({b: 'Dictionary'});
+// Object 'string' is allocated at address 1
+// This object is now 'reachable' from the 'integer' object:
+var string = alloc_struct({b: 'Dictionary'});
 // The allocation uses the address (array index) 
-// where "String_const_long" is allocated on the heap:
-Int_const['String_const_long'] = String_const_long['address']; 
-console.log(String_const_long);
+// where "string" is allocated on the heap:
+integer['string'] = string['address']; 
+console.log(string);
 
-// Object "Bool_const_true" is allocated at address 2
-// The object is now 'reachable' from "Int_const": 
-// e.g = root -> Int_const -> Bool_const_true
-var Bool_const_true = alloc_struct({c: true});
-// The allocation uses the address (array index) where "Bool_const_true"
+// Object "bool_t" is allocated at address 2
+// The object is now 'reachable' from "integer": 
+// e.g = root -> integer -> bool_t
+var bool_t = alloc_struct({c: true});
+// The allocation uses the address (array index) where "bool_t"
 // is allocated on the heap as follows:
-Int_const['Bool_const_true'] = Bool_const_true['address']; 
-console.log(Bool_const_true);
+integer['bool_t'] = bool_t['address']; 
+console.log(bool_t);
 
-// Now, let us delete the 'Bool_const_true' reference from 'Int_const'
-// Now 'Bool_const_true' is 'unreachable' and subsequently becomes a candidate for GC.
-delete Int_const['Bool_const_true'];
-console.log(Int_const);
+// Now, let us delete the 'bool_t' reference from 'integer'
+// Now 'bool_t' is 'unreachable' and subsequently becomes a candidate for GC.
+delete integer['bool_t'];
+console.log(integer);
 
-// Object "String_const_short" is allocated at address 3
-// The object is 'reachable' from 'String_const_long' 
+// Object "string_" is allocated at address 3
+// The object is 'reachable' from 'string' 
 // (which in turn is reachable from:
-// 'Int_const': root -> Int_const -> String_const_long -> String_const_short
-var String_const_short = alloc_struct({d: 'Hello'});
-String_const_long['String_const_short'] = String_const_short['address']; 
+// 'integer': root -> integer -> string -> string_
+var string_ = alloc_struct({d: 'Hello'});
+string['string_'] = string_['address']; 
 
-// But then the 'String_const_long' object reference is removed from 'Int_const'.
-delete Int_const['String_const_long'];
-console.log(Int_const);
+// But then the 'string' object reference is removed from 'integer'.
+delete integer['string'];
+console.log(integer);
 
-// Yet, let us not forget that 'String_const_short' still has the reference to it
-// from "String_const_long", but it's not reachable (since the "b" itself is not reachable anymore).
-// e.g = root: -> Int_const --//--> String_const_long -> String_const_short
+// Yet, let us not forget that 'string_' still has the reference to it
+// from "string", but it's not reachable (since the "b" itself is not reachable anymore).
+// e.g = root: -> integer --//--> string -> string_
 
-// REMEMBER: that even when an object has some references to it, it doesn't
+// Remember: that even when an object has some references to it, it doesn't
 // mean it cannot be GC'ed. The criteria is "reachability", but not the
 // reference counting here.
 
-// Object 'Bool_const_false' is allocated at address 4 
-// This becomes 'reachable' from the object 'Int_const'
-var Bool_const_false = alloc_struct({e: false});
-Int_const.Bool_const_false = Bool_const_false['address'];
-// IMPORTANT: the object 'Bool_const_false' also has back-reference to 'Int_const':
-Bool_const_false.Int_const = Int_const['address'];
-console.log(Int_const);
+// Object 'bool_f' is allocated at address 4 
+// This becomes 'reachable' from the object 'integer'
+var bool_f = alloc_struct({e: false});
+integer['bool_f'] = bool_f['address'];
+// IMPORTANT: the object 'bool_f' also has back-reference to 'integer':
+bool_f['integer'] = integer['address'];
+console.log(integer);
 
 // After various assignments and deletions, the passing of 'reachable' to 'unreachable', 
 // the heap still contains five objects:
-// Inst_const = a, String_const_long = b, Bool_const_true = c, String_const_short = d, 
-// Bool_const_false = e, but remember, only the objects 
-// 	- Inst_const 
-//	- Bool_const_false 
-// are now 'reachable' on the heap starting from the root index.
+// integer = a, string = b, bool_t = c, string_ = d, bool_f = e, but remember, only 
+// the objects: integer and bool_f are now 'reachable' on the heap starting from the root index.
+
 
 // ---------------------------------------------------------------------------
 // 2. Stop and Copy GC, Fixing Pointer Issue and Fowarding Pointers
@@ -217,9 +219,9 @@ console.log(Int_const);
 // by forwarding addresses. This will update any other objects and their pointers 
 // incrementally and we can denote markers accordingly by dividing the young generation 
 // into three parts: 
-// 	- Copied & Scanned objects *
-// 	- Just copied objects *
-// 	- And the Free space *
+// 	 Copied & Scanned objects *
+// 	 Just copied objects *
+// 	 And the Free space *
 
 // Our new allocation pointers are set to the boundary of the
 // 'old generation' and 'young generation' (that is, to the middle of our heap array).
@@ -242,6 +244,7 @@ function copyNewSpace(object) {
 	object['forwardingAddress'] = ALLOC_POINTER;
 	// Put on the heap (which increases the alloc_struct pointer).
   	alloc_struct(newCopiedObject);
+
 	return newCopiedObject;
 }
 
@@ -263,8 +266,8 @@ function gc_sc() {
   // Therefore, we can do this by assigning our copyNewSpace(Int_const).
   // Let's copy it to the young generation, by automatically increasing the 
   // allocation pointer, but still keeping the scan pointer at its position.
-  var copiedA = copyNewSpace(Int_const);
-  Int_const['forwardingAddress'] = copiedA['address'];
+  var copiedA = copyNewSpace(integer);
+  integer['forwardingAddress'] = copiedA['address'];
 
   // From this, we have now differentiated our scanner and allocation pointers.
   // For now we have only the 'Int_const' object. During our scanning, we copy all 
@@ -301,13 +304,17 @@ function gc_sc() {
     	// at scanning of their parent object, and which not scanned yet).
     	SCANNER_POINTER++;
 	}
-    
+
     // Now we can swap old and young spaces, making the young space our working
     // runtime memory, and the old space reserved for GC.
-  	
+  	for (var k = OLD_GENERATION_BOUND; k < YOUNG_GENERATION_BOUND; k++) {
+    	// Just clean old space for the debug purpose. In real practice it's not
+    	// necessary, this addresses can be just overridden by later allocations.
+    	delete heap[k];
+ 	}
+
     // Store our five live objects
   	var store = YOUNG_GENERATION_BOUND;
-
   	// Reset = 0 objects
   	YOUNG_GENERATION_BOUND = OLD_GENERATION_BOUND;
   	// Reset = 5 objects
@@ -331,7 +338,7 @@ function objectToString(object) {
     // This is done first:
     if (typeof(object) == "object" && (object.join == undefined)) {
     	for (item in object) {
-        	empty_string.push(item, ": ", objectToString(object[item]), "\n");
+        	empty_string.push(item, " -> ", objectToString(object[item]), "\n");
     	};
 	}
 	// Next we look for items if it is an array: 
@@ -358,7 +365,9 @@ function objectToString(object) {
 // Let's show some implementated results:
 console.log('HEAP BEFORE GC_SC:' + '\n\n', objectToString(heap));
 
+
 // Now let's run the GC algorithm:
+console.log('PERFORM GC_SC ALGORITHM: gc_sc();');
 gc_sc();
 
 // Now let's show some implemented results with the GC algorithm:
@@ -416,7 +425,7 @@ function generation(object, array) {
     	   // Segment our heap items.
           for (var i = 0; i < item.length;)
             	// Then for each item push into array
-            	i++
+            	i++;
         		array[item] = object[item];
       		}
     	};
@@ -431,11 +440,6 @@ function generation(object, array) {
 // Callback our generation function upon the manipulated heap,
 // takes the parameters of both the object(heap), and desired generational
 // array space (G_0,G_1, G_2);
-console.log('PERFORM AND PUSH HEAP ONTO G_0.');
-generation(heap, G_0);
-console.log('G_0 RESULTS:' + '\n\n' + objectToString(G_0));
-
-
 // As it seems, the gc_sc() function is just running ontop of the manipulated heap.
 // There seems to be 1 index being added, 11 is being added to another index, each
 // time the gc_sc() is being called...?
@@ -448,22 +452,73 @@ console.log('G_0 RESULTS:' + '\n\n' + objectToString(G_0));
 // Hopefully, less objects than previous. 
 // If so, store the objects into G_0.
 
+console.log('PUSH HEAP ONTO G_0;');
+generation(heap, G_0);
+console.log('G_0 RESULTS:' + '\n\n' + objectToString(G_0));
+
+
+// ---------------------------------------------------------------------------
+// 1.2 Heap[1] Representation
+// ---------------------------------------------------------------------------
+
+// If we take the results from the first GC_SC, then we can continue our abstract
+// representation of the heap into our generational phases. The following 
+
 // Repeat steps until you fill up G_1, G_2.
-console.log('REARRANGE HEAP');
-console.log('PERFORM GC_SC ALGORITHM');
+console.log('REARRANGE HEAP:');
+
+// a: 10
+// bool_f: 
+// forwardingAddress: 
+// Keep a:
+
+// b: "Dictionary"
+// string_:
+// keep b: 
+
+// Object 'string' is now allocated at address 1
+// This object is now 'reachable' from the 'root' index:
+var string = alloc_struct({b: 'Once Upon A Time'});
+// The allocation uses the address (array index) 
+// where "string" is allocated on the heap:
+integer['bool_f'] = string['address']; 
+console.log(string);
+
+// But then the 'string' object reference is removed from 'integer'.
+delete integer['string'];
+
+
+// Object "string_" is allocated at address 2
+// The object is now 'reachable' from "integer": 
+// e.g = root -> integer -> string_
+var string_ = alloc_struct({c: 'In The West'});
+// The allocation uses the address (array index) where 'string_'
+// is allocated on the heap as follows:
+integer['string_'] = string_['address']; 
+console.log(string_);
+
+// Now, let us delete the 'string_' reference from 'integer'
+// Now 'string_' is 'unreachable' and subsequently becomes a candidate for GC.
+delete integer['string_'];
+
+
+delete integer['bool_f'];
+
+
+
+// Show results of our heap before our GC_SC() callback.
+console.log('HEAP BEFORE GC_SC:' + '\n\n', objectToString(heap));
+
+// Should now have only three objects as two have been deleted.
+console.log('PERFORM GC_SC ALGORITHM: gc_sc();');
 
 gc_sc();
 
-console.log('PERFORM AND PUSH HEAP ONTO G_1.');
+// Show results of our heap after our GC_SC() callback.
+console.log('HEAP AFTER GC_SC:' + '\n\n', objectToString(heap));
+
+// Now after performing the GC_SC() upon our heap representation,
+// we can now push our results into the G_1 array.
+console.log('PUSH HEAP ONTO G_1;');
 generation(heap, G_1);
 console.log('G_1 RESULTS:' + '\n\n' + objectToString(G_1));
-
-// Repeat steps until you fill up G_1, G_2.
-console.log('REARRANGE HEAP');
-console.log('PERFORM GC_SC ALGORITHM');
-
-gc_sc();
-
-console.log('PERFORM AND PUSH HEAP ONTO G_2.');
-generation(heap, G_2);
-console.log('G_2 RESULTS:' + '\n\n' + objectToString(G_2));
