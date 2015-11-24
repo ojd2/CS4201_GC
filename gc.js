@@ -36,35 +36,18 @@
 
 // To put the following program into perspective, first the program should use some simple
 // Heap structure, memory, allocation and object referencing functions. 
-// These can then be broken into two generations: 'old_space' (old_generation), 
-// 'new_space' (young_generation). The young generation: Most of the newly created objects 
-// are located here. The old generation: Objects that did not become unreachable / survived 
-// the young generation are copied here. When objects disappear from the young generation: 
+// These can then be broken into two generations: 'FROM_BOUND' (old_generation), 
+// 'TO_BOUND' (young_generation). The young generation: Most of the newly created objects 
+// are located here. The from-space: Objects that did not become unreachable / survived 
+// the to-space are copied here. When objects disappear from the to-space: 
 // we say a 'minor GC' has occurred. When objects disappear from the old generation: we say a 
 // 'major GC' (or a 'full GC') has occurred. There are a number of different algorithms that
 // incrementally perform this proceedure. For example, the traditional "mark and sweep" algorithm, 
 // however this lacksany generational proceedure. Rather the algorithm, uses traversing methods
 // over unreachable and reachable objects in the heap. This is known as the 'marking phase',
 // - subsequently, the 'sweep' phase occurs soon after. Sweeping takes all the unreachable objects 
-// and assigns them too an empty space. Other various algorthims have derived from 'mark and sweep'.
-
-// The program below is derived from various 'tracing collection' techniques and implemented variation
-// of the improved 'stop and copy' algorithm. Other generational aspects are derived from the famous
-// Generation Scavenging Algorithm by Ungar which is an implemented version of Cheney's algorithm:
-
-// 1. Each object is classified as new or old
-// 2. Old objects reside in memory region called old area
-// 3. New objects can be found in following places:
-// 		- New Space
-// 		- Past Survivor Space
-// 		- Future Survivor Space
-// 		- Remembered Set : Set of old objects having a reference to new object
-// 5. All new objects are reachable through Remembered Set objects and roots
-// 6. During GC, live objects from NewSpace and PastSurvivorSpace are  moved to Future Survivor Space
-// 7. Interchange FutureSurvivorSpace with Past Survivor Space
-// 8. New Space can be reused for new objects
-// 9. Space cost of only 1bit/object
-// 10. Tenuring : promotion from new space to old space
+// and assigns them too an empty space. Other various algorthims have derived from 'mark and sweep',
+// such as the 'Stop and Copy' algorithm this program is dervived from.
 
 
 // ---------------------------------------------------------------------------
@@ -80,13 +63,11 @@
 
 var heap = Array(20); // heap of size 20
 
-// Now we can implment our heap division. The heap is divided into two spaces 
-// for our objects to be assigned in. The old generation is where our <current objects> live. 
-// The young generation in contrast is initially reserved for GC needs.
-
-// For simplicity assuming the half of the heap array as a divider of
-// the old Generation and new Generation: initially first half (0-9 indices) is Old Generation,
-// the second half (indices 10-19) is New (mark it with two bars):
+// Now we can implment our heap divisions. The heap is divided into two spaces 
+// for our objects to be assigned in. The from-space or 'old generation' is where our 
+// <current objects> live. The to-space or 'young generation' in contrast is initially
+// reserved for GC needs. First half (0-9 indices) is from-space, the second half 
+// (indices 10-19) is the to-space.
 
 // Set up two variables for the two generational divisions and their indices.
 // Reasons for doing this are because: In many programs, recently created objects are also 
@@ -96,9 +77,9 @@ var heap = Array(20); // heap of size 20
 // for this purpose. Therefore, many generational GC's use separate memory regions
 // for different ages of objects.
 
-// Current old generation (working) space.
+// Current from-space (working) space.
 var FROM_BOUND = 0; 
-// Start of the young generation space.
+// Start of the to-space space.
 var TO_BOUND = 10; 
 // Spaces for the generation objects to be passed after GC.
 var G_0 = {};
@@ -109,7 +90,7 @@ console.log(FROM_BOUND);
 console.log(TO_BOUND);
 
 // Initially the allocation pointer is set to the beginning of 
-// the old generation (to zero).
+// the from-space (to zero).
 var ALLOC_POINTER = FROM_BOUND;
 
 // Set up a function which denotes allocation of various objects. 
@@ -175,8 +156,7 @@ console.log(INT);
 // Yet, let us not forget that 'string_' still has the reference to it
 // from "STRING", but it's not reachable (since the "b" itself is not reachable anymore).
 // e.g = root: -> INT --//--> STRING -> STRING_
-
-// Remember: that even when an object has some references to it, it doesn't
+// Also, remember that even when an object has some references to it, it doesn't
 // mean it cannot be GC'ed. The criteria is "reachability", but not the
 // reference counting here.
 
@@ -198,9 +178,8 @@ console.log(INT);
 // 2. Stop and Copy GC, Fixing Pointer Issue and Fowarding Pointers
 // ---------------------------------------------------------------------------
 
-// In this moving Stop and Copy GC, all memory is divided into a "from space" and "to space".
-// This particular program has allocated these partitions as young generation & old generation. 
-// Initially, objects are allocated into a 'to space' until the space becomes full. 
+// In this moving Stop and Copy GC, all memory is divided into a 'from-space' and 'to-space'. 
+// Initially, objects are allocated into a 'to-space' until the space becomes full. 
 // Next, a GC algorithm is triggered, below we highlight the Stop and Copy GC algorithm 
 // which is a more redefined 'mark and sweep' algorithm.  
 
@@ -217,16 +196,16 @@ console.log(INT);
 
 // At runtime, we can assign and mark the copied objects more efficiently 
 // by forwarding addresses. This will update any other objects and their pointers 
-// incrementally and we can denote markers accordingly by dividing the young generation 
+// incrementally and we can denote markers accordingly by dividing the to-space 
 // into three parts: 
 // 	 Copied & Scanned objects *
 // 	 Just copied objects *
 // 	 And the Free space *
 
-// Our new allocation pointers are set to the boundary of the
-// 'old generation' and 'young generation' (that is, to the middle of our heap array).
+// Our new allocation pointers are set to the boundary of both the to-space and from-space
+// or 'old generation' and 'young generation' (that is, to the middle of our heap array).
 
-// Allocate from the young generation now at GC:
+// Allocate from the to-space now at GC:
 ALLOC_POINTER = TO_BOUND;
 // And the Scanner pointer is set initially here too:
 var SCANNER_POINTER = ALLOC_POINTER;
@@ -261,16 +240,16 @@ function isAddressPointer(name, value) {
 // ---------------------------------------------------------------------------
 
 function gc_sc() {
-  // Firstly, we must copy 'root' objects to the 'young generation'. 
-  // We only have one reachable object here and that is the 'Int_const' object.
-  // Therefore, we can do this by assigning our copyNewSpace(Int_const).
-  // Let's copy it to the young generation, by automatically increasing the 
+  // Firstly, we must copy 'root' objects to the new space. 
+  // We only have one reachable object here and that is the 'INT' object.
+  // Therefore, we can do this by assigning our copyNewSpace(INT).
+  // Let's copy it to the to-space, by automatically increasing the 
   // allocation pointer, but still keeping the scan pointer at its position.
   var copy = copyNewSpace(INT);
   INT['forwardingAddress'] = copy['address'];
 
   // From this, we have now differentiated our scanner and allocation pointers.
-  // For now we have only the 'Int_const' object. During our scanning, we copy all 
+  // For now we have only the 'INT' object. During our scanning, we copy all 
   // these sub-objects and mark them as copied too (set the "forwarding address" flag).
 
 	while (SCANNER_POINTER != ALLOC_POINTER) { 
@@ -304,9 +283,8 @@ function gc_sc() {
     	// at scanning of their parent object, and which not scanned yet).
     	SCANNER_POINTER++;
 	}
-
-    // Now we can swap old and young spaces, making the young space our working
-    // runtime memory, and the old space reserved for GC.
+    // Now we can swap from-space and to-space, making the to-space our working
+    // runtime memory, and the from-space reserved for GC.
   	for (var k = FROM_BOUND; k < TO_BOUND; k++) {
     	// Just clean old space for the debug purpose. In real practice it's not
     	// necessary, this addresses can be just overridden by later allocations.
@@ -360,8 +338,8 @@ function objectToString(object) {
 }
 
 // Before we console log some results...
-// Notice, that the address of 'Bool_const_false' in the 'Int_const' object is 4, and
-// the back-reference address of 'Int_const' on 'Bool_const_false' is 0.
+// Notice, that the address of 'BOOL_' in the 'INT' object is 4, and
+// the back-reference address of 'INT' on 'BOOL_' is 0.
 // Let's show some implementated results:
 console.log('HEAP BEFORE GC_SC:' + '\n\n', objectToString(heap));
 
@@ -371,9 +349,9 @@ console.log('PERFORM GC_SC ALGORITHM: gc_sc();');
 gc_sc();
 
 // Now let's show some implemented results with the GC algorithm:
-// Notice, that the address of 'Bool_const_false' object in the 'Int_const' is correctly
+// Notice, that the address of 'BOOL_' object in the 'INT' is correctly
 // updated to the new location, 11, and the the back-reference
-// address of 'Int_const' on 'Bool_const_false' is 10.
+// address of 'INT' on 'BOOL_' is 10.
 console.log('HEAP AFTER GC_SC:' + '\n\n', objectToString(heap));
 
 // ---------------------------------------------------------------------------
@@ -382,9 +360,6 @@ console.log('HEAP AFTER GC_SC:' + '\n\n', objectToString(heap));
 
 // We need a mechanism to copy the live data of one region of memory to a 
 // contiguous group of records in another region.
-
-// This can be done without an auxiliary stack or queue; using the 'Cheney' 
-// algorithm, which uses the destination region as the queue of a BF search:
 
 // Strict stop-and-copy requires copying every live object from the source 
 // heap to a new heap before you could free the old one, which translates 
@@ -408,7 +383,6 @@ console.log('HEAP AFTER GC_SC:' + '\n\n', objectToString(heap));
 // Objects containing simillar age : [heap]
 // Divide, objects, add to a generational space
 // Perform GC_SC algorithm, with each result, add to a new space.
-
 
 // 1 - Take all objects in [heap] (currently there will be)
 // 2 - Divide and segment objects from [heap]
@@ -467,18 +441,9 @@ console.log('G_0 RESULTS:' + '\n\n' + objectToString(G_0));
 // Repeat steps until you fill up G_1, G_2.
 console.log('REARRANGE HEAP:');
 
-// a: 10
-// bool_f: 
-// forwardingAddress: 
-// Keep a:
-
-// b: "Dictionary"
-// string_:
-// keep b: 
-
 // Object 'STRING' is now allocated at address 1
 // This object is now 'reachable' from the 'root' index:
-var STRING = alloc_struct({b: 'Once Upon A Time'});
+var STRING = alloc_struct({f: 'Once Upon A Time'});
 // The allocation uses the address (array index) 
 // where "STRING" is allocated on the heap:
 INT['STRING'] = STRING['address']; 
@@ -491,7 +456,7 @@ delete INT['BOOL_'];
 // Object "STRING_" is allocated at address 2
 // The object is now 'reachable' from "INT": 
 // e.g = root -> INT -> STRING_
-var STRING_ = alloc_struct({c: 'In The West'});
+var STRING_ = alloc_struct({g: 'In The West'});
 // The allocation uses the address (array index) where 'STRING_'
 // is allocated on the heap as follows:
 INT['STRING_'] = STRING_['address']; 
@@ -517,3 +482,59 @@ console.log('HEAP AFTER GC_SC:' + '\n\n', objectToString(heap));
 console.log('PUSH HEAP INTO G_1;');
 generation(heap, G_1);
 console.log('G_1 RESULTS:' + '\n\n' + objectToString(G_1));
+
+// ---------------------------------------------------------------------------
+// 1.2 Heap[2] Representation
+// ---------------------------------------------------------------------------
+
+// Let's add some 'boxed' objects onto the heap.
+// Object 'STRING' is allocated at address 0
+// This object is now 'reachable' from the 'root' index:
+var STRING = alloc_struct({h: 'ROOT'});
+console.log(STRING);
+
+// The allocation uses the address (array index) 
+// where "INT" is allocated on the heap:
+STRING['INT'] = INT['address']; 
+console.log(INT);
+
+// Object "STRING_" is allocated at address 3
+// The object is 'reachable' from 'STRING' 
+// (which in turn is reachable from:
+// 'INT': root -> STRING -> INT -> STRING__
+var STRING = alloc_struct({k: 'Hello there my friends'});
+STRING['STRING'] = STRING__['address']; 
+
+
+
+// Yet, let us not forget that 'STRING_' still has the reference to it
+// from "STRING", but it's not reachable (since the "b" itself is not reachable anymore).
+// e.g = root: -> INT --//--> STRING -> STRING_
+// Also, remember that even when an object has some references to it, it doesn't
+// mean it cannot be GC'ed. The criteria is "reachability", but not the
+// reference counting here.
+
+// Object 'BOOL_' is allocated at address 4 
+// This becomes 'reachable' from the object 'INT'
+var BOOL__ = alloc_struct({l: false});
+STRING['BOOL__'] = BOOL__['address'];
+// IMPORTANT: the object 'BOOL_' also has back-reference to 'INT':
+BOOL__['STRING'] = STRING['address'];
+console.log(STRING);
+
+// Show results of our heap before our GC_SC() callback.
+console.log('HEAP BEFORE GC_SC:' + '\n\n', objectToString(heap));
+
+// Should now have only three objects as two have been deleted.
+console.log('PERFORM GC_SC ALGORITHM: gc_sc();');
+
+gc_sc();
+
+// Show results of our heap after our GC_SC() callback.
+console.log('HEAP AFTER GC_SC:' + '\n\n', objectToString(heap));
+
+// Now after performing the GC_SC() upon our heap representation,
+// we can now push our results into the G_1 array.
+console.log('PUSH HEAP INTO G_2;');
+generation(heap, G_2);
+console.log('G_1 RESULTS:' + '\n\n' + objectToString(G_2));
