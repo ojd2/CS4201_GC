@@ -122,7 +122,7 @@ console.log(INT);
 
 // Object 'STRING' is allocated at address 1
 // This object is now 'reachable' from the 'INT' object:
-var STRING = alloc_struct({b: 'Dictionary'});
+var STRING = alloc_struct({b: 'Rocket man'});
 // The allocation uses the address (array index) 
 // where "STRING" is allocated on the heap:
 INT['STRING'] = STRING['address']; 
@@ -490,7 +490,7 @@ console.log('G_1 RESULTS:' + '\n\n' + objectToString(G_1));
 // Let's add some 'boxed' objects onto the heap.
 // Object 'STRING' is allocated at address 0
 // This object is now 'reachable' from the 'root' index:
-var STRING = alloc_struct({h: 'ROOT'});
+var STRING = alloc_struct({h: 'One last time'});
 console.log(STRING);
 
 // The allocation uses the address (array index) 
