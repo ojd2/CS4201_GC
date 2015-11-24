@@ -134,64 +134,64 @@ function alloc_struct(object) {
 // ---------------------------------------------------------------------------
 
 // Let's add some 'boxed' objects onto the heap.
-// Object 'integer' is allocated at address 0
+// Object 'INT' is allocated at address 0
 // This object is now 'reachable' from the 'root' index:
-var integer = alloc_struct({a: 10});
-console.log(integer);
+var INT = alloc_struct({a: 10});
+console.log(INT);
 
-// Object 'string' is allocated at address 1
-// This object is now 'reachable' from the 'integer' object:
-var string = alloc_struct({b: 'Dictionary'});
+// Object 'STRING' is allocated at address 1
+// This object is now 'reachable' from the 'INT' object:
+var STRING = alloc_struct({b: 'Dictionary'});
 // The allocation uses the address (array index) 
-// where "string" is allocated on the heap:
-integer['string'] = string['address']; 
-console.log(string);
+// where "STRING" is allocated on the heap:
+INT['STRING'] = STRING['address']; 
+console.log(STRING);
 
-// Object "bool_t" is allocated at address 2
-// The object is now 'reachable' from "integer": 
-// e.g = root -> integer -> bool_t
-var bool_t = alloc_struct({c: true});
-// The allocation uses the address (array index) where "bool_t"
+// Object "BOOL" is allocated at address 2
+// The object is now 'reachable' from "INT": 
+// e.g = root -> INT -> BOOL
+var BOOL = alloc_struct({c: true});
+// The allocation uses the address (array index) where "BOOL"
 // is allocated on the heap as follows:
-integer['bool_t'] = bool_t['address']; 
-console.log(bool_t);
+INT['BOOL'] = BOOL['address']; 
+console.log(BOOL);
 
-// Now, let us delete the 'bool_t' reference from 'integer'
-// Now 'bool_t' is 'unreachable' and subsequently becomes a candidate for GC.
-delete integer['bool_t'];
-console.log(integer);
+// Now, let us delete the 'BOOL' reference from 'INT'
+// Now 'BOOL' is 'unreachable' and subsequently becomes a candidate for GC.
+delete INT['BOOL'];
+console.log(INT);
 
-// Object "string_" is allocated at address 3
+// Object "STRING_" is allocated at address 3
 // The object is 'reachable' from 'string' 
 // (which in turn is reachable from:
-// 'integer': root -> integer -> string -> string_
-var string_ = alloc_struct({d: 'Hello'});
-string['string_'] = string_['address']; 
+// 'INT': root -> INT -> STRING -> STRING_
+var STRING_ = alloc_struct({d: 'Hello'});
+STRING['STRING_'] = STRING_['address']; 
 
-// But then the 'string' object reference is removed from 'integer'.
-delete integer['string'];
-console.log(integer);
+// But then the 'STRING' object reference is removed from 'INT'.
+delete INT['STRING'];
+console.log(INT);
 
 // Yet, let us not forget that 'string_' still has the reference to it
-// from "string", but it's not reachable (since the "b" itself is not reachable anymore).
-// e.g = root: -> integer --//--> string -> string_
+// from "STRING", but it's not reachable (since the "b" itself is not reachable anymore).
+// e.g = root: -> INT --//--> STRING -> STRING_
 
 // Remember: that even when an object has some references to it, it doesn't
 // mean it cannot be GC'ed. The criteria is "reachability", but not the
 // reference counting here.
 
-// Object 'bool_f' is allocated at address 4 
-// This becomes 'reachable' from the object 'integer'
-var bool_f = alloc_struct({e: false});
-integer['bool_f'] = bool_f['address'];
-// IMPORTANT: the object 'bool_f' also has back-reference to 'integer':
-bool_f['integer'] = integer['address'];
-console.log(integer);
+// Object 'BOOL_' is allocated at address 4 
+// This becomes 'reachable' from the object 'INT'
+var BOOL_ = alloc_struct({e: false});
+INT['BOOL_'] = BOOL_['address'];
+// IMPORTANT: the object 'BOOL_' also has back-reference to 'INT':
+BOOL_['INT'] = INT['address'];
+console.log(INT);
 
 // After various assignments and deletions, the passing of 'reachable' to 'unreachable', 
 // the heap still contains five objects:
-// integer = a, string = b, bool_t = c, string_ = d, bool_f = e, but remember, only 
-// the objects: integer and bool_f are now 'reachable' on the heap starting from the root index.
+// INT = a, STRING = b, BOOL = c, STRING_ = d, BOOL_ = e, but remember, only 
+// the objects: INT and BOOL_ are now 'reachable' on the heap starting from the root index.
 
 
 // ---------------------------------------------------------------------------
@@ -266,8 +266,8 @@ function gc_sc() {
   // Therefore, we can do this by assigning our copyNewSpace(Int_const).
   // Let's copy it to the young generation, by automatically increasing the 
   // allocation pointer, but still keeping the scan pointer at its position.
-  var copiedA = copyNewSpace(integer);
-  integer['forwardingAddress'] = copiedA['address'];
+  var copiedA = copyNewSpace(INT);
+  INT['forwardingAddress'] = copiedA['address'];
 
   // From this, we have now differentiated our scanner and allocation pointers.
   // For now we have only the 'Int_const' object. During our scanning, we copy all 
@@ -476,33 +476,33 @@ console.log('REARRANGE HEAP:');
 // string_:
 // keep b: 
 
-// Object 'string' is now allocated at address 1
+// Object 'STRING' is now allocated at address 1
 // This object is now 'reachable' from the 'root' index:
-var string = alloc_struct({b: 'Once Upon A Time'});
+var STRING = alloc_struct({b: 'Once Upon A Time'});
 // The allocation uses the address (array index) 
-// where "string" is allocated on the heap:
-integer['bool_f'] = string['address']; 
-console.log(string);
+// where "STRING" is allocated on the heap:
+INT['BOOL_'] = STRING['address']; 
+console.log(STRING);
 
-// But then the 'string' object reference is removed from 'integer'.
-delete integer['string'];
+// But then the 'STRING' object reference is removed from 'INT'.
+delete INT['string'];
 
 
-// Object "string_" is allocated at address 2
-// The object is now 'reachable' from "integer": 
-// e.g = root -> integer -> string_
-var string_ = alloc_struct({c: 'In The West'});
-// The allocation uses the address (array index) where 'string_'
+// Object "STRING_" is allocated at address 2
+// The object is now 'reachable' from "INT": 
+// e.g = root -> INT -> STRING_
+var STRING_ = alloc_struct({c: 'In The West'});
+// The allocation uses the address (array index) where 'STRING_'
 // is allocated on the heap as follows:
-integer['string_'] = string_['address']; 
-console.log(string_);
+INT['STRING_'] = STRING_['address']; 
+console.log(STRING_);
 
-// Now, let us delete the 'string_' reference from 'integer'
-// Now 'string_' is 'unreachable' and subsequently becomes a candidate for GC.
-delete integer['string_'];
+// Now, let us delete the 'STRING_' reference from 'INT'
+// Now 'STRING_' is 'unreachable' and subsequently becomes a candidate for GC.
+delete INT['STRING_'];
 
 
-delete integer['bool_f'];
+delete INT['BOOL_'];
 
 
 
