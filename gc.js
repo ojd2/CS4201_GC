@@ -502,25 +502,12 @@ console.log(INT);
 // The object is 'reachable' from 'STRING' 
 // (which in turn is reachable from:
 // 'INT': root -> STRING -> INT -> STRING__
-var STRING = alloc_struct({k: 'Hello there my friends'});
-STRING['STRING'] = STRING__['address']; 
+var STRING_ = alloc_struct({k: 'Hello there my friends'});
+INT['STRING'] = STRING_['address']; 
 
-
-
-// Yet, let us not forget that 'STRING_' still has the reference to it
-// from "STRING", but it's not reachable (since the "b" itself is not reachable anymore).
-// e.g = root: -> INT --//--> STRING -> STRING_
-// Also, remember that even when an object has some references to it, it doesn't
-// mean it cannot be GC'ed. The criteria is "reachability", but not the
-// reference counting here.
-
-// Object 'BOOL_' is allocated at address 4 
-// This becomes 'reachable' from the object 'INT'
-var BOOL__ = alloc_struct({l: false});
-STRING['BOOL__'] = BOOL__['address'];
-// IMPORTANT: the object 'BOOL_' also has back-reference to 'INT':
-BOOL__['STRING'] = STRING['address'];
-console.log(STRING);
+// Now, let us delete the 'STRING' reference from 'INT'
+// Now 'STRING' is 'unreachable' and subsequently becomes a candidate for GC.
+delete INT['STRING'];
 
 // Show results of our heap before our GC_SC() callback.
 console.log('HEAP BEFORE GC_SC:' + '\n\n', objectToString(heap));
@@ -537,4 +524,4 @@ console.log('HEAP AFTER GC_SC:' + '\n\n', objectToString(heap));
 // we can now push our results into the G_1 array.
 console.log('PUSH HEAP INTO G_2;');
 generation(heap, G_2);
-console.log('G_1 RESULTS:' + '\n\n' + objectToString(G_2));
+console.log('G_2 RESULTS:' + '\n\n' + objectToString(G_2));
