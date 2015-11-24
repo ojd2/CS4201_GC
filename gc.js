@@ -97,20 +97,20 @@ var heap = Array(20); // heap of size 20
 // for different ages of objects.
 
 // Current old generation (working) space.
-var OLD_GENERATION_BOUND = 0; 
+var FROM_BOUND = 0; 
 // Start of the young generation space.
-var YOUNG_GENERATION_BOUND = 10; 
+var TO_BOUND = 10; 
 // Spaces for the generation objects to be passed after GC.
 var G_0 = {};
 var G_1 = {};
 var G_2 = {};
 
-console.log(OLD_GENERATION_BOUND);
-console.log(YOUNG_GENERATION_BOUND);
+console.log(FROM_BOUND);
+console.log(TO_BOUND);
 
 // Initially the allocation pointer is set to the beginning of 
 // the old generation (to zero).
-var ALLOC_POINTER = OLD_GENERATION_BOUND;
+var ALLOC_POINTER = FROM_BOUND;
 
 // Set up a function which denotes allocation of various objects. 
 // Then assign our objects and store onto the heap.
@@ -227,7 +227,7 @@ console.log(INT);
 // 'old generation' and 'young generation' (that is, to the middle of our heap array).
 
 // Allocate from the young generation now at GC:
-ALLOC_POINTER = YOUNG_GENERATION_BOUND;
+ALLOC_POINTER = TO_BOUND;
 // And the Scanner pointer is set initially here too:
 var SCANNER_POINTER = ALLOC_POINTER;
 
@@ -266,8 +266,8 @@ function gc_sc() {
   // Therefore, we can do this by assigning our copyNewSpace(Int_const).
   // Let's copy it to the young generation, by automatically increasing the 
   // allocation pointer, but still keeping the scan pointer at its position.
-  var copiedA = copyNewSpace(INT);
-  INT['forwardingAddress'] = copiedA['address'];
+  var copy = copyNewSpace(INT);
+  INT['forwardingAddress'] = copy['address'];
 
   // From this, we have now differentiated our scanner and allocation pointers.
   // For now we have only the 'Int_const' object. During our scanning, we copy all 
@@ -307,18 +307,18 @@ function gc_sc() {
 
     // Now we can swap old and young spaces, making the young space our working
     // runtime memory, and the old space reserved for GC.
-  	for (var k = OLD_GENERATION_BOUND; k < YOUNG_GENERATION_BOUND; k++) {
+  	for (var k = FROM_BOUND; k < TO_BOUND; k++) {
     	// Just clean old space for the debug purpose. In real practice it's not
     	// necessary, this addresses can be just overridden by later allocations.
     	delete heap[k];
  	}
 
     // Store our five live objects
-  	var store = YOUNG_GENERATION_BOUND;
+  	var store = TO_BOUND;
   	// Reset = 0 objects
-  	YOUNG_GENERATION_BOUND = OLD_GENERATION_BOUND;
+  	TO_BOUND = FROM_BOUND;
   	// Reset = 5 objects
-  	OLD_GENERATION_BOUND = store;
+  	FROM_BOUND = store;
 
 } // End gc_sc();
 
@@ -452,7 +452,7 @@ function generation(object, array) {
 // Hopefully, less objects than previous. 
 // If so, store the objects into G_0.
 
-console.log('PUSH HEAP ONTO G_0;');
+console.log('PUSH HEAP INTO G_0;');
 generation(heap, G_0);
 console.log('G_0 RESULTS:' + '\n\n' + objectToString(G_0));
 
@@ -481,12 +481,12 @@ console.log('REARRANGE HEAP:');
 var STRING = alloc_struct({b: 'Once Upon A Time'});
 // The allocation uses the address (array index) 
 // where "STRING" is allocated on the heap:
-INT['BOOL_'] = STRING['address']; 
+INT['STRING'] = STRING['address']; 
 console.log(STRING);
 
-// But then the 'STRING' object reference is removed from 'INT'.
-delete INT['string'];
-
+// But then both STRING & BOOL_ object references are removed from 'INT'.
+delete INT['STRING'];
+delete INT['BOOL_'];
 
 // Object "STRING_" is allocated at address 2
 // The object is now 'reachable' from "INT": 
@@ -501,11 +501,6 @@ console.log(STRING_);
 // Now 'STRING_' is 'unreachable' and subsequently becomes a candidate for GC.
 delete INT['STRING_'];
 
-
-delete INT['BOOL_'];
-
-
-
 // Show results of our heap before our GC_SC() callback.
 console.log('HEAP BEFORE GC_SC:' + '\n\n', objectToString(heap));
 
@@ -519,6 +514,6 @@ console.log('HEAP AFTER GC_SC:' + '\n\n', objectToString(heap));
 
 // Now after performing the GC_SC() upon our heap representation,
 // we can now push our results into the G_1 array.
-console.log('PUSH HEAP ONTO G_1;');
+console.log('PUSH HEAP INTO G_1;');
 generation(heap, G_1);
 console.log('G_1 RESULTS:' + '\n\n' + objectToString(G_1));
