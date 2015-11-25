@@ -217,14 +217,14 @@ function checkAddress(name, value) {
 // 3. Start the 'Stop & Copy' GC Phase
 // ---------------------------------------------------------------------------
 
-function gc_sc() {
+function gc_sc(root) {
   // Firstly, we must copy 'root' objects to the new space. 
   // We only have one reachable object here and that is the 'INT' object.
   // Therefore, we can do this by assigning our copyNewSpace(INT).
   // Let's copy it to the to-space, by automatically increasing the 
   // allocation pointer, but still keeping the scan pointer at its position.
-  var copy = copyNewSpace(INT);
-  INT['forwardingAddress'] = copy['address'];
+  var copy = copyNewSpace(root);
+  root['forwardingAddress'] = copy['address'];
 
   // From this, we have now differentiated our scanner and allocation pointers.
   // For now we have only the 'INT' object. During our scanning, we copy all 
@@ -324,7 +324,7 @@ console.log('HEAP BEFORE GC_SC:' + '\n\n', objectToString(heap));
 
 // Now let's run the GC algorithm:
 console.log('PERFORM GC_SC ALGORITHM: gc_sc();');
-gc_sc();
+gc_sc(INT);
 
 // Now let's show some implemented results with the GC algorithm:
 // Notice, that the address of 'BOOL_' object in the 'INT' is correctly
@@ -419,30 +419,48 @@ console.log('G_0 RESULTS:' + '\n\n' + objectToString(G_0));
 // Repeat steps until you fill up G_1, G_2.
 console.log('REARRANGE HEAP:');
 
-// Object 'STRING' is now allocated at address 1
-// This object is now 'reachable' from the 'root' index:
-var STRING_1 = pointAddress({f: 'Once Upon A Time'});
-// The allocation uses the address (array index) 
-// where "STRING" is allocated on the heap:
-INT['STRING_1'] = STRING_1['address']; 
-console.log(STRING_1);
+// Object 'STRING_R' is now allocated at address 6
+// This object is now our new 'root'.
+var STRING_R = pointAddress({f: 'Welcome [NEW ROOT]'});
+console.log(STRING_R);
 
-// But then both STRING & BOOL_ object references are removed from 'INT'.
-delete INT['STRING'];
-delete INT['BOOL_'];
+// Object 'INT_N' is now allocated at address 7
+// This object is now our new 'root'.
+var INT_N = pointAddress({g: '22'});
+STRING_R['INT_N'] = INT_N['address'];
+console.log(INT_N);
+console.log(STRING_R);
 
-// Object "STRING_" is allocated at address 2
-// The object is now 'reachable' from "INT": 
-// e.g = root -> INT -> STRING_
-var STRING_2 = pointAddress({g: 'In The West'});
-// The allocation uses the address (array index) where 'STRING_'
-// is allocated on the heap as follows:
-INT['STRING_2'] = STRING_2['address']; 
-console.log(STRING_2);
+// However, now we delete the reference for INT_N -> STRING_R
+delete STRING_R['INT_N'];
 
-// Now, let us delete the 'STRING_' reference from 'INT'
-// Now 'STRING_' is 'unreachable' and subsequently becomes a candidate for GC.
-delete INT['STRING_2'];
+// Object 'INT_F' is established and allocated at address 8
+var INT_F = pointAddress({g: '55'});
+STRING_R['INT_F'] = INT_F['address'];
+// We will also begin a back reference to our STRING_R root.
+// INT_F -> STRING_R
+// STRING_R -> INT_F
+INT_F['STRING_R'] = STRING_R['address'];
+console.log(INT_F);
+console.log(STRING_R);
+
+// However, we also delete the reference for INT_F to our STRING_R root.
+delete STRING_R['INT_F'];
+
+var STRING_L = pointAddress({h: 'No way'});
+STRING_R['STRING_L'] = STRING_L['address'];
+console.log(STRING_L);
+console.log(STRING_R);
+
+delete STRING_R['STRING_L'];
+
+var BOOL_I = pointAddress({i : true});
+STRING_R['BOOL_I'] = BOOL_I['address'];
+console.log(BOOL_I);
+console.log(STRING_R);
+
+// This should leave us with our STRING_R & BOOL_I objects left and 
+// all objects remaining must be collected.
 
 // Show results of our heap before our GC_SC() callback.
 console.log('HEAP BEFORE GC_SC:' + '\n\n', objectToString(heap));
@@ -450,7 +468,7 @@ console.log('HEAP BEFORE GC_SC:' + '\n\n', objectToString(heap));
 // Should now have only three objects as two have been deleted.
 console.log('PERFORM GC_SC ALGORITHM: gc_sc();');
 
-gc_sc();
+gc_sc(STRING_R);
 
 // Show results of our heap after our GC_SC() callback.
 console.log('HEAP AFTER GC_SC:' + '\n\n', objectToString(heap));
@@ -465,44 +483,6 @@ console.log('G_1 RESULTS:' + '\n\n' + objectToString(G_1));
 // 1.2 Heap[2] Representation
 // ---------------------------------------------------------------------------
 
-// Let's add some 'boxed' objects onto the heap.
-// Object 'STRING' is allocated at address 0
-// This object is now 'reachable' from the 'root' index:
-var STRING_3 = pointAddress({h: 'One last time'});
-console.log(STRING_3);
-
-// The allocation uses the address (array index) 
-// where "INT" is allocated on the heap:
-INT['STRING_3'] = INT['address']; 
-console.log(INT);
-
-// Object "STRING_" is allocated at address 3
-// The object is 'reachable' from 'STRING' 
-// (which in turn is reachable from:
-// 'INT': root -> STRING -> INT -> STRING__
-var STRING_4 = pointAddress({k: 'Hello there my friends'});
-INT['STRING_4'] = INT['address']; 
-
-// Now, let us delete the 'STRING' reference from 'INT'
-// Now 'STRING' is 'unreachable' and subsequently becomes a candidate for GC.
-delete INT['STRING_4'];
-
-// Show results of our heap before our GC_SC() callback.
-console.log('HEAP BEFORE GC_SC:' + '\n\n', objectToString(heap));
-
-// Should now have only three objects as two have been deleted.
-console.log('PERFORM GC_SC ALGORITHM: gc_sc();');
-
-gc_sc();
-
-// Show results of our heap after our GC_SC() callback.
-console.log('HEAP AFTER GC_SC:' + '\n\n', objectToString(heap));
-
-// Now after performing the GC_SC() upon our heap representation,
-// we can now push our results into the G_1 array.
-console.log('PUSH HEAP INTO G_2;');
-generation(heap, G_2);
-console.log('G_2 RESULTS:' + '\n\n' + objectToString(G_2));
 
 
 // GIT VERSION HAS BEFORE AMENDS OF STRING_ VALUES ETC..
