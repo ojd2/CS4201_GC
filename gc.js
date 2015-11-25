@@ -209,7 +209,7 @@ function copyNewSpace(object) {
 // For abstraction the function and algorithm usees simplified versioning.
 // We take the address in the heap array using its index (which are numbers). 
 // E.g. Int_const.String_const_long = 1.
-function isAddressPointer(name, value) {
+function checkAddress(name, value) {
   return typeof value == 'number' && name != 'address' && name != 'forwardingAddress';
 }
 
@@ -234,7 +234,7 @@ function gc_sc() {
       // Get the next object within our Scanner pointer:
       var nextObjectScan = heap[SCANNER_POINTER];
       // Begin a simple traversal algorithm, checking all its reference properties
-      for (var p1 in nextObjectScan) if (isAddressPointer(p1, nextObjectScan[p1])) {
+      for (var p1 in nextObjectScan) if (checkAddress(p1, nextObjectScan[p1])) {
       
         var address = nextObjectScan[p1]; 
         // Get the object to which this reference points to:
