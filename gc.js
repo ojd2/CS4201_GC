@@ -174,9 +174,6 @@ var y = makeCons(makeInt(55, heap), f, heap);
 // The criteria for our GC is too target non-reachable objects.
 // Therefore we must delete or cut off some root level association path for one
 // of our objects for the GC to efficiently work. 
-//x = delete x;
-
-
 
 // ---------------------------------------------------------------------------
 // 2. Stop and Copy GC, Fixing Pointer Issue and Fowarding Pointers
@@ -357,25 +354,14 @@ function objectToString(object) {
     return empty_string.join("");
 }
 
-// Before we console log some results...
-// Notice, that the address of 'BOOL_' in the 'INT' object is 4, and
-// the back-reference address of 'INT' on 'BOOL_' is 0.
-// Let's show some implementated results:
-//console.log('HEAP BEFORE GC_SC:' + '\n\n', objectToString(heap));
-
-// Now let's run the GC algorithm:
-
-// 
+// Show some results
 console.log('HEAP BEFORE GC:');
 
 for (var k = 0; k < heap.size; k++) {
-    console.log(heap.from[k]);
+    console.log(JSON.stringify(heap.from[k]));
 }
-
 console.log('PERFORM GC_SC ALGORITHM: gc_sc(x, heap);');
-
 console.log('RESULTS:');
-
 gc_sc([f], heap);
 
 
