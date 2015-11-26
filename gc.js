@@ -1,24 +1,39 @@
 /**
- * Generational Garbage Collection technique.
+ *
+ * Module: CS4201.
+ * Assignment 2: Generational Garbage Collection.
+ * Student id: 150022355.
+ * Lecturer: Prof. Kevin Hammond.
+ * Submitted: 27/11/15.
+ *
+ * Generational Garbage Collection Technique.
+ * Implementation of 'uniformed' heap representaions.
+ * The derived garbage collection algorithm used is 'stop-and-copy'.
+ * Version 1.0.
+ *
 **/
 
 // ---------------------------------------------------------------------------
-// I. Overall Goal for our Generational Garbage Collection program.
+// I. Overall Goal For Our Generational Garbage Collection Program
 // ---------------------------------------------------------------------------
 
-// To optimize for this algorithm, memory is managed in generations which simply 
+// To optimize this algorithm, the idea is for memory to be managed in generations which simply 
 // holds various objects of different ages. Garbage collection occurs in each generation when 
 // the generation fills up. Objects are allocated in a generation for younger objects or 
 // the young generation, and because of infant mortality most objects die there. 
 // When the young generation fills up it causes a minor collection. 
 // Minor collections can be optimized assuming a high infant mortality rate. 
+// However, as you will find, there are some missing functionality from the code which enables
+// our GC algorithm to promote objects into various n++ generation spaces. (G0 -> Gn)...
 
 // To put the following program into perspective, first the program should use some simple
-// Heap structure, memory, allocation and object referencing functions. 
-// These can then be broken into two generations: 'FROM_SPACE' (old_generation), 
-// 'TO_SPACE' (young_generation). The young generation: Most of the newly created objects 
-// are located here. The from-space: Objects that did not become unreachable / survived 
-// the to-space are copied here. When objects disappear from the to-space: 
+// heap structure, memory, allocation and object referencing functions. 
+// These can then be broken into two generations: 
+// 'from-space' (old_generation), 
+// 'to-space' (young_generation). 
+// The 'to-space': Most of the newly created objects are located here. 
+// The 'from-space': Objects that did not become unreachable / survived the to-space are copied here. 
+// When objects disappear from the to-space: 
 // we say a 'minor GC' has occurred. When objects disappear from the old generation: we say a 
 // 'major GC' (or a 'full GC') has occurred. There are a number of different algorithms that
 // incrementally perform this proceedure. For example, the traditional "mark and sweep" algorithm, 
@@ -30,10 +45,10 @@
 
 
 // ---------------------------------------------------------------------------
-// 1. Heap structure, allocation and reachability.
+// 1. Heap Structure, Allocation & Reachability
 // ---------------------------------------------------------------------------
 
-// Firstly, we must establish our 'heap', which will contain several 'boxed' elements.
+// Firstly, we must establish our 'heap', which will contain several uniformed 'boxed' elements.
 // We can pull out elements from the ARC program. ARC is used as a simple technique of 
 // storing the number of references, pointers, or handles to a resource such as an 
 // object, block of memory, disk space or other resource. Essentially, we need somewhere
@@ -41,20 +56,6 @@
 // be located inside our heap array below.
 
 var heap = makeHeap(20); // heap of size 20
-
-// Now we can implment our heap divisions. The heap is divided into two spaces 
-// for our objects to be assigned in. The from-space or 'old generation' is where our 
-// <current objects> live. The to-space or 'young generation' in contrast is initially
-// reserved for GC needs. First half (0-9 indices) is from-space, the second half 
-// (indices 10-19) is the to-space.
-
-// Set up two variables for the two generational divisions and their indices.
-// Reasons for doing this are because: In many programs, recently created objects are also 
-// most likely to become unreachable incredibly quicker than first thought. 
-// This is known as the infant mortality or the generational hypothesis.
-// With generational GC's it is easier to divide our heap into two divisions 
-// for this purpose. Therefore, many generational GC's use separate memory regions
-// for different ages of objects.
 
 // Current from-space (working) space.
 var FROM_SPACE = 0; 
@@ -64,9 +65,6 @@ var TO_SPACE = 10;
 var G_0 = {};
 var G_1 = {};
 var G_2 = {};
-
-//console.log(FROM_SPACE);
-//console.log(TO_SPACE);
 
 // Initially the allocation pointer is set to the beginning of 
 // the from-space (to zero).
@@ -86,6 +84,19 @@ function pointAddress(object) {
   return object;
 }
 
+// Now we can implment our heap divisions. The heap is divided into two spaces 
+// for our objects to be assigned in. The from-space or 'old generation' is where our 
+// currently reachable objects live. The to-space or 'young generation' in contrast is 
+// initially reserved for GC needs. First half (0-9 indices) is from-space, the second half 
+// (indices 10-19) is the to-space.
+
+// Set up two variables for the two generational divisions and their indices.
+// Reasons for doing this are because: In many programs, recently created objects are also 
+// most likely to become unreachable incredibly quicker than first thought. 
+// This is known as the infant mortality or the generational hypothesis.
+// With generational GC's it is easier to divide our heap into two divisions 
+// for this purpose. Therefore, many generational GC's use separate memory regions
+// for different ages of objects.
 
 // ---------------------------------------------------------------------------
 // 1.1 Uniform Heap Representation
@@ -100,47 +111,72 @@ function makeInt (n, heap) {
 // Set up function for creating 'cons' with a value of 'head, tail and heap'.
 function makeCons (head, tail, heap) {
    // The returned value proceeds with a function call implementing
-   // our head, tail elements.
+   // our 'head', 'tail' elements.
    return heap.pointAddress ({ head: head, tail: tail });
 }
-// Set up function to create our uniformed heap.
-// Returns several values which store size, from space, next space, next_to space,
+// Set up function to create our uniformed heap. The function returns 
+// several values which store object, object_array, size and next,
 // and the to_space.
-
 function alloc (object, object_array, size, next) {
-      // if our next space is smaller and equal to size of heap
+      // If our next space is smaller and equal to size of heap:
       if (next <= size) {
-        // perform allocation of array to object.
+        // Perform allocation of array to object:
         object_array[next] = object;
-        // next needs to be decremented to resolve our array not pointing
-        // to our desired root object.        
+        // Return next object:      
         return next;
       } else {
-        // return failure code like null.
+        // Let us return failure code, such as 'null':
         console.log(next);
         console.log(size);
-        console.log('Failure');
+        console.log('failed');
         return null;
       }
-} // end pointAddress
+} // End pointAddress()
 
+// Our makeHeap() function denotes several internal functions which subsquently
+// allocate several functional operations. The idea of this is to enable flexibilty,
+// extending our uniformed heap structure beyond just some global elements.
 
+// The function passes the variable of 'n', which is used to allocate a dynamic heap size
+// for our simple array structure intiated futher above on line 43.
+// The function returns a number of helper 'tags' which helps create our 'from-space' and 
+// our 'to-space', with an additional 'next_to' space. The 'next_to' space stores our objects
+// after they leave the nursery, before the GC algorithm is called upon the objects.
+//
+// [      Old Space        ||  {2}, {4}  |    To Space    ] 
+// [      Old Space        ||   Next To  |    To Space    ] 
+//
+// Note: Remember that our 'n' resembles an abstract representation of our dynamic heap and the 
+// number of heap elements. This is why 'n' is passed in our return elements 'size', 'from' 
+// and 'to' because we want the heap space to capture and assign all of our dynamic elements 
+// added onto the stack. The 'next' variable is used for passing in our objects within a 
+// contained space. This needs to be done for incremental purposes.
 function makeHeap (n) {
   return {
     size: n,
-    from: new Array(n), // Array for from-space
-    next: 0,
-    next_to: 0,
-    to: new Array(n), // Array for to-space
-
+    from: new Array(n), // Array for 'from-space'.
+    next: 0, // Set up a traversal 'next' variable and set to 0.
+    next_to: 0, // Set 'next_to' space which is also empty and set to 0.
+    to: new Array(n), // Array for 'to-space'.
+    
+    // Our pointAddress() function is used to return our alloc() upon our object.
+    // The function is basically used for assigning our objects and storing onto the heap.
+    // For whatever object on the heap, it has the function return our initiated 
+    // elements from makeHeap() function return above. 
     pointAddress:  function (o) {
       return alloc(o, this.from, this.size, this.next++);
     },
     
+    // The pointAddressTo() is used to explicitly keep the 'address' of the object. 
+    // The heap array index and where the object is allocated.
+    // Incrementally this increases the 'next_to' variable. 
+    // This allows us to move objects into the next_to space.
     pointAddressTo: function (o) {
       return alloc(o, this.to, this.size, this.next_to++);
     },
-    
+
+    // Our heapSwapSpaces() function is used to help us to move 
+    // object assignment from our 'from-space' to our 'to-space'. 
     heapSwapSpaces: function () {
       var t = this.from;
       from = this.to;
@@ -148,35 +184,40 @@ function makeHeap (n) {
     }
   } // end return
 
-} // end makeHeap()
+} // End makeHeap()
 
-
-// Set up structure of the heap.
-// Simple abstracted representation.
+// ---------------------------------------------------------------------------
+// 1.2 Set Up The Structure Of The Heap
+// ---------------------------------------------------------------------------
 
 // We first use the makeInt() to create ourselves an integer object.
-// Integer created stores the value 24 and associates itself with the
-// new abstracted heap.
-var z = makeInt(24, heap);
+// Integer created stores the value 10 and associates itself with the
+// new abstracted heap. This allows us to create a more 'uniformed' 
+// representation of our abstracted heap elements.
+var z = makeInt(10, heap);
 // Next, we do the same with our makeCons() function however we 
 // add the value of a standard 'null'. Notice how we also tag 'z' which
 // is a variable we are storing our integer in. 
-// 24 -> null
-// null -> 24
+// 
+// z: {10} -> x: {null}
+// x: {null} <- z: {10}
+//
+// This particular functional assignment is continued for other various 
+// elements. These are subsequentyl passed along with our 'heap' variable
+// and added onto our stack representation.
 var x = makeCons(z, null, heap);
-
-var f = makeCons(makeInt(42, heap), x, heap);
-
-var y = makeCons(makeInt(55, heap), f, heap);
-
-
-
-// The criteria for our GC is too target non-reachable objects.
-// Therefore we must delete or cut off some root level association path for one
-// of our objects for the GC to efficiently work. 
+var f = makeCons(makeInt(2, heap), x, heap);
+var y = makeCons(makeInt(4, heap), f, heap);
+var k = makeCons(makeInt(6, heap), y, heap);
+var j = makeCons(makeInt(8, heap), k, heap);
+var m = makeCons(makeInt(12, heap), j, heap);   
+// The criteria for our GC is too target non-reachable objects. 
+// Therefore we must cut off some root level association path for one
+// of our objects for the GC to efficiently work. This is called further down
+// in the code where we call our GC algorithm: gc_sc();
 
 // ---------------------------------------------------------------------------
-// 2. Stop and Copy GC, Fixing Pointer Issue and Fowarding Pointers
+// 2. Stop and Copy GC, Fixing Pointer Issue & Fowarding Pointers
 // ---------------------------------------------------------------------------
 
 // In this moving Stop and Copy GC, all memory is divided into a 'from-space' and 'to-space'. 
@@ -186,11 +227,13 @@ var y = makeCons(makeInt(55, heap), f, heap);
 
 // Abstractly, there doesn't need to be any bit-for-bit copy inclusion. 
 // Bit-for-bit inclusion would enable us to assign more detailed references.
-// Because of this, there will be copying issues. As our abstract representation 
+// Because of this, there would be copying issues. As our abstract representation 
 // does not cater for more precise references, therefore some properties of 
-// objects may be referencing to other objects. 
+// objects may be referencing to other objects. This is unfortunatley one of the pitfalls
+// when trying to implement a strict GC in JavaScript, other languages such as C++ would
+// potentially provide more concrete implementation techniques.
 
-// So after the copying we should try adjust all pointers and their objects to
+// After the 'copying' we should try adjust all pointers and their objects to
 // point to the new space where the objects were copied.
 // A technique which may help us to solve this issue is a 'Forwarding Addresses'.
 // This technique contains a special marker value which we can put on the object when copy it.
@@ -199,118 +242,109 @@ var y = makeCons(makeInt(55, heap), f, heap);
 // by forwarding addresses. This will update any other objects and their pointers 
 // incrementally and we can denote markers accordingly by dividing the to-space 
 // into three parts: 
-//   Copied & Scanned objects *
-//   Just copied objects *
-//   And the Free space *
+//   Copied & Scanned objects -> 'from-space'
+//   Just copied objects  - > 'next_to'
+//   And the Free space -> 'to-space'
 
-// Our new allocation pointers are set to the boundary of both the to-space and from-space
-// or 'old generation' and 'young generation' (that is, to the middle of our heap array).
+// Our new allocation pointers are set to the boundary of both the 
+// 'to-space' and 'from-space'. This is ideal because as we mentioned earlier,
+// our heap becomes flexible in size. 
 
-// Allocate from the to-space now at GC:
+// Set up some basic variables for our pointer and to be used 
+// 'abstractly' within our GC function and algorithm. 
 POINTER = TO_SPACE;
 // And the Scanner pointer is set initially here too:
 var SCANNER_POINTER = POINTER;
 
-// Now let's set up a function to connect objects to their new locations.
-// Object is empty...
+// Now let's set up a function to connect objects to 
+// their new locations. Remember, our 'object' is abstract and is 'empty'...
 function copyNewSpace(heap, object) {
-  // Now copy empty {}
+  // We create a variable to store an empty object array:
   var newCopiedObject = {};
-
-  // find items in our heap associated objects we have created.
+  // Find items in our 'from-space' heap and associated objects we have created.
   for (var item in heap.from[object]) {
     if (item != 'address' && item != 'forwardingAddress') {
           newCopiedObject[item] = heap.from[object][item];
     }
   }
-
-  // Now mark the old object as copied:
+  // Now mark the old object as copied or 'assigned':
   heap.from['forwardingAddress'] = POINTER;
-  // Put on the heap (which increases the pointAddress pointer).
-  // Takes copied object, from heap.to and increments over into next.to.
+  // Next let us return these onto the heap 
+  // this subsequently increases the pointAddress() pointer.
+  // Finally, the function takes a copied object, 
+  // from 'heap.to' and increments over into 'next.to' heap.
   return heap.pointAddressTo(newCopiedObject);
 }
 
-// Now let's set up a function to check if value is an address:
+// Now let's set up a function to check if 'value' is an 'address' marker.
 // For abstraction the function and algorithm usees simplified versioning.
 // We take the address in the heap array using its index (which are numbers). 
-// E.g. Int_const.String_const_long = 1.
+// E.G. address = 1.
 function checkAddress(name, value) {
   return typeof value == 'number' && name != 'address' && name != 'forwardingAddress';
 }
 
 function copy(x, h) {
-
-    // check for special case null object.
+     // Important: We need a special marker checker for any
+     // of our special 'null' objects.
     if ( x == null) {
         return null;
     }
-
+    // For output reasons, let us console log our address
+    // and our value 'x' for which is being passed.
     console.log('address: ' + x);
+    // Next, let us assign a variable which marks our object 
+    // address but inside our 'to-space'. The idea is not to
+    // loose track of our 'addresses' and assigned 'values' 
+    // from one space to another.
     var new_x = copyNewSpace(h, x);
-
     for (f in heap.to[new_x]) {
         console.log('new address in to space: ' + new_x);
         if (f !== 'intValue') {
             copy(heap.to[new_x][f], h);
         }
     } 
+    // Finally, we return our 'new_x' variable and this allows
+    // us to use this in our GC algorithm.
     return new_x;
 }
 
-
-
 // ---------------------------------------------------------------------------
-// 3. Start the 'Stop & Copy' GC Phase
+// 3. Start The Abstracted 'Stop & Copy' GC Algorthim
 // ---------------------------------------------------------------------------
+
+// Firstly, we must copy 'root' objects to the new space. 
+// We only have one reachable object here and that is the 'root' object.
+// Therefore, we can do this by assigning our gc_sc(root). Nevertheless,
+// we also need to pass our functional 'heap' variable which allows our 
+// GC algorithm (derived 'stop-and-copy') over our abstract heap structure.
+  
+// Let's copy it to the 'to-space', by automatically creating a simple for loop
+// that iterates from our 'root' object and traverses down. We are also keeping 
+// the scan pointer at its position. 
 
 function gc_sc(root, heap) {
-  // Firstly, we must copy 'root' objects to the new space. 
-  // We only have one reachable object here and that is the 'INT' object.
-  // Therefore, we can do this by assigning our copyNewSpace(INT).
-  // Let's copy it to the to-space, by automatically increasing the 
-  // allocation pointer, but still keeping the scan pointer at its position.
-  // var copy_ = copyNewSpace(heap, root);
-  // root['forwardingAddress'] = copy_['address'];
-
   // From this, we have now differentiated our scanner and allocation pointers.
-  // For now we have only the 'INT' object. During our scanning, we copy all 
-  // these sub-objects and mark them as copied too (set the "forwarding address" flag).
+  // Our scanner now points to our 'from-space' heap. For now we have only the 'root' object. 
+  // During our scanning, we copy all these sub-objects and mark them as copied as well.
 
+  // This is done by pushing our 'form-space' objects to the 'new_roots' empty array.
+  // Reasons, for doing this are because we need to keep track of our 'root' objects when 
+  // swaping objects over spaces. If this was not implemented below, our function would fail
+  // because it would not be able to keep track of reassignment in one space to another.
+  // Further down the line, this became an issue for trying to implement the generational 
+  // promotion functions. This is explained in more detail further down in the code. 
   var SCANNER = heap.from;
   console.log('root: ' + root);
-
-  //copy(root, heap);
   var new_roots = new Array ();
 
   for (var i = 0; i < root.length; i++) {
       new_roots.push(copy(root[i], heap));
   }
-
-
-  // while (SCANNER < heap.size) {
-
-  //           // Get the object to which this reference points to:
-  //           var objectAtAddress = heap[address];
-
-  //           // If that object hasn't been copied yet (i.e. has no forwarding address set)
-  //           if (!('forwardingAddress' in objectAtAddress)) {
-  //           // Then we copy this sub-object as well and mark it specifying 'forwardingAddress'.
-  //           var copiedObjectAtAddress = copyNewSpace(objectAtAddress);
-  //           // And we also need the pointer value on the scanning object to
-  //           // refer to the new location.
-  //           nextObjectScan[p1] = copiedObjectAtAddress.address;
-  //         } 
-  //         // Else, the object which this sub-property refers to, was already copied at
-  //         // some previous scan of some other objects (an object can be referred by many
-  //         // properties in different objects)
-  //         else {
-  //           // Then we just update the pointer to the forwarding address
-  //           nextObjectScan[p1] = objectAtAddress.forwardingAddress;
-  //         }
-  // }
-
     // Now let us store and reset spaces.
+    // To do this, we call our simple re-assignment 
+    // heapSwapSpaces() function we initiated at the
+    // begining of our code. 
     heap.heapSwapSpaces();
 
     return new_roots;
@@ -319,72 +353,46 @@ function gc_sc(root, heap) {
 
 
 // ---------------------------------------------------------------------------
-// 4. Pretty Print Our Results So Far.
+// 4. Let's Show Some GC Results
 // ---------------------------------------------------------------------------
-// Set up a function to convert our objects in the heap stack to a nice looking
-// pretty print. For now, we will convert our outputs using a small function which
-// converts our objects to a string.
-function objectToString(object) {
-    // Empty string array which will allow us to append our objects
-    var empty_string = [];
 
-    // Our heap is an array of objects. Therefore, the function below searches for
-    // typeof 'object' and pushes elements into our empty_string[] array.
-    // This is done first:
-    if (typeof(object) == "object" && (object.join == undefined)) {
-      for (item in object) {
-          empty_string.push(item, " -> ", objectToString(object[item]), "\n");
-      };
-  }
-  // Next we look for items if it is an array: 
-  else if (typeof(object) == "object" && !(object.join == undefined)) {
-      for(item in object) {
-          empty_string.push(objectToString(object[item]), "\n");
-      }
-  } 
-  // If objects is a function
-  else if (typeof(object) == "function") {
-      empty_string.push(object.toString(), "\n");
-  } 
-  // For all other other values can be done with JSON.stringify
-  else {
-      empty_string.push(JSON.stringify(object), "\n");
-  }
-    // Return our results and values and join them simply to our empty_string[]
-    return empty_string.join("");
-}
-
-// Show some results
-console.log('HEAP BEFORE GC:');
-
+// Time to show some implemented results with the GC algorithm.
+// We can use some simple console.logs() for this.
+// Notice, that the address of the 'f' object in the updated to the new location, 
+console.log('FIRST HEAP BEFORE GC:' + '\n\n' );
+// Simple for loop to go over our heap of 'from-space' objects.
 for (var k = 0; k < heap.size; k++) {
     console.log(JSON.stringify(heap.from[k]));
 }
-console.log('PERFORM GC_SC ALGORITHM: gc_sc(x, heap);');
-console.log('RESULTS:');
+console.log('\n\n' );
+console.log('FIRST PERFORM GC_SC ALGORITHM: gc_sc([f], heap);' + '\n\n');
+console.log('HEAP AFTER GC:' + '\n');
+// The function of our GC using an abstracted implementation
+// of the 'stop-and-copy' algorithm is called and we pass our 
+// key index '[f]' upon our heap representaion. 
 gc_sc([f], heap);
 
-
-
-//console.log(gc_sc(x, heap));
-
-
-
-// Now let's show some implemented results with the GC algorithm:
-// Notice, that the address of 'BOOL_' object in the 'INT' is correctly
-// updated to the new location, 11, and the the back-reference
-// address of 'INT' on 'BOOL_' is 10.
-
-// console.log('HEAP AFTER GC_SC:' + '\n\n', objectToString(heap));
+// For outputting reasons, we have two different outputs of the
+// GC alogirthm being called upon two different index keys.
+console.log('\n\n' );
+console.log('SECOND HEAP BEFORE GC:' + '\n\n');
+// Simple for loop to go over our heap of 'from-space' objects.
+for (var k = 0; k < heap.size; k++) {
+    console.log(JSON.stringify(heap.from[k]));
+}
+console.log('\n\n' );
+console.log('PERFORM GC_SC ALGORITHM: gc_sc([j], heap);' + '\n\n');
+console.log('SECOND HEAP AFTER GC:' + '\n\n');
+gc_sc([j], heap);
 
 // ---------------------------------------------------------------------------
-// 5. Mechanism To Copy The Newly Assigned Live Data Into Generations
+// 5. Mechanism To Promote The Newly Assigned Live Objects Into Generations
 // ---------------------------------------------------------------------------
 
 // We need a mechanism to copy the live data of one region of memory to a 
 // contiguous group of records in another region.
 
-// Strict stop-and-copy requires copying every live object from the source 
+// Strict 'stop-and-copy' requires copying every live object from the source 
 // heap to a new heap before you could free the old one, which translates 
 // to lots of memory. With blocks, the GC can typically use dead blocks to 
 // copy objects to as it collects. Each block has a generation count to keep
@@ -392,39 +400,74 @@ gc_sc([f], heap);
 // since the last GC are compacted; all other blocks get their generation 
 // count bumped if they have been referenced from somewhere. 
 
-// This handles the normal case of lots of short-lived temporary objects. 
+// This handles the idea of lots of short-lived temporary objects. 
 // Periodically, a full sweep is made - large objects are still not copied
 // (just get their generation count bumped) and blocks containing small 
-// objects are copied and compacted. This is where the "adaptive" part 
-// comes in, so you end up with a mouthful: "adaptive generational 
-// stop-and-copy."
+// objects are copied and compacted. 
 
-// ALGORITHM:
+// Unfortunately, trying to implement the generation promotion turned out
+// to be incredibly tricky and after several versions of the different code,
+// This had to be re-evaluated and re-designed. Time constraints restricted
+// the program from evolving further. 
 
-// Take objects of simillar age. This would be the state of our heap
-// after the GC_SC function has been called.
-// Objects containing simillar age : [heap]
-// Divide, objects, add to a generational space
-// Perform GC_SC algorithm, with each result, add to a new space.
+// ---------------------------------------------------------------------------
+// POTENTIAL IDEA FOR CODE ALGORITHM. THE ALGORITHM WAS GOING TO BE USED FOR 
+// JOINING TOGETHER VARIOUS GENERATIONAL FUNCTIONS BELOW BUT WAS NOT USED.
+// ---------------------------------------------------------------------------
 
-// 1 - Take all objects in [heap] (currently there will be)
+// 1 - Take objects of simillar age. (Current state of heap).
+// 2 - Objects containing simillar age : our first heap.
+// 3 - Divide, objects, add to a generational space recursively.
+// 4 - Perform GC_SC algorithm, with each result, add to a new space.
+
+// Let's break it down a bit more:
+
+// 1 - Take all objects in [heap] 
 // 2 - Divide and segment objects from [heap]
 // 3 - Push all objects in [heap] into our first generation: G0.
 // 3 - Push objects into older g1, g2 as they survive successive collection cycles.
 
-// NOTE TO SELF: Am I right in thinking that I need too run the gc_sc function 
-// within each G_0, G_1, G_2 etc.
+// Ideally, we needed to have some empty arrays to store our objects associated 
+// spaces for the generation objects to be passed after GC.
+
+// For example:
+
+// var G_0 = {};
+// var G_1 = {};
+// var G_2 = {};
+
+// However, it seems as though the functional approach would of been more easier to 
+// implement and it would allow us to adapt to mutliple n++ generation heaps. G0... -> Gn
+
+// Starting off, the idea was to have a function which created an empty array of heaps.
+
+// For example:
 
 // function genHeaps() {
 //   var heaps = {};
 //   return object[];
 // }
 
+// Next the idea was to have a function which would subsequently push our initial 
+// heap representation (using the 'makeHeap') function. This heap would be pushed into
+// the empty 'heaps' array we initiated above in the genHeaps() function.
+// The function would take the 'n' variable as it would push per heap.  
+
+// For example:
+
 //  function createNextHeap(n)  {
 //     this.heaps.push(makeHeap(n));
 // }
 
-// function generation(object, array) {
+// Finally, we needed generation function which takes the 'heaps' array and 
+// it's current associated objects. Inside this function, it simply looks for
+// objects in a desired array. The idea for this function was for it to connect
+// the dots together and act as a promotional anchor for our generalised GC routine.
+
+// For example:
+
+// function generation(object, array, index) {
+//
 //   // Pull elements from heap and push into our array.
 //   if (typeof(object) == "object") {
 //       for (item in object) {
@@ -434,48 +477,49 @@ gc_sc([f], heap);
 //               i++;
 //               array[item] = object[item];
 
-//             // Rather than iterate over object 'o'
-//             // Say, for each object 'reachable o' in G_0 
-//             // copy(o) into G_1
-
-//             // G_1.alloc()
-
-//             // if (o in pset) {
-//             // continue
-//             // }
-            
-//             // for (m in o) {
-//             // o'[m] = o[m];
-//             // }
+//               // However, it seems as though the function needed some
+//              // conditional statements to identify live objects and from
+//             // here we would be able to implement our GC algorithm 'gc_sc'
+//            // upon each generational promotion into our heaps array.
+//              
+//             if (objects in set(g0, g1, g2) == "object") {
+//             continue;
+//             }
+//
 //           }
 //       };
-//     // Return our array
+//    
+//     // Finally, return our array full of items.
 //     return array;
+//
 // }
 
+// Call our generation function passing in our object, desired heap implementation
+// and our key index.
 
-// generation(h, heaps, index);
+// For example:
+
+// generation(h, heaps, f);
 
 
 // ---------------------------------------------------------------------------
-// 6. Generation Tests and Promotion
+// II. Conclusion And Overall Summary
 // ---------------------------------------------------------------------------
-// Show results of our new array objects:
-// Callback our generation function upon the manipulated heap,
-// takes the parameters of both the object(heap), and desired generational
-// array space (G_0,G_1, G_2);
-// As it seems, the gc_sc() function is just running ontop of the manipulated heap.
-// There seems to be 1 index being added, 11 is being added to another index, each
-// time the gc_sc() is being called...?
-// Best bet is taking the manipulated heap and using some reassignment logic as we
-// did at the top of the program. As this is an abstracted representation of a GGC,
-// making JavaScript do all our systematic work is quite tricky. 
 
-// Begin another re-assignment of variables and addresses on the current heap.
-// Perform another gc_sc() upon new assignments and see what the results are.
-// Hopefully, less objects than previous. 
-// If so, store the objects into G_0.
+// Although the generational aspect of the GC routine is abscent, it was easier to
+// describe a potential working algorithm for implementing the generational promotions
+// than programming a fix. It seems as though the program was incredibly close to fulfilling
+// the generational promotion mechanisim. 
 
-//console.log('PUSH HEAP INTO G_0;');
-//generation(heap, G_0);
-//console.log('G_0 RESULTS:' + '\n\n' + objectToString(G_0));
+// Reasons for not being able to successfully implement the generational promotion is because
+// the generation() function does not provide an addaptive solution for an arbitrary amount of 
+// generation promotions. Although the heap implementation enables the program to cope for this,
+// there was significant difficulty in designing an efficient bridge between the waterfall of 
+// promotional functions: 
+
+// For example:
+
+// [     genHeaps()     ->  ||  -> createNextHeap(n)   ->  ||  ->   generation()    ]
+
+// My overall understanding seemed to be initially correct, however my lack of pure functional
+// programming experience let me down on the last hurdle. 
