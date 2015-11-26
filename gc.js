@@ -65,8 +65,8 @@ var G_0 = {};
 var G_1 = {};
 var G_2 = {};
 
-console.log(FROM_SPACE);
-console.log(TO_SPACE);
+//console.log(FROM_SPACE);
+//console.log(TO_SPACE);
 
 // Initially the allocation pointer is set to the beginning of 
 // the from-space (to zero).
@@ -83,7 +83,6 @@ function pointAddress(object) {
   heap[POINTER] = object;
   // Set up post-increment operator
   POINTER++;
-
   return object;
 }
 
@@ -91,42 +90,91 @@ function pointAddress(object) {
 // ---------------------------------------------------------------------------
 // 1.1 Uniform Heap Representation
 // ---------------------------------------------------------------------------
-function makeInt(n, heap) {
+
+// Set up function for creating 'int' with a value of 'n'.
+function makeInt (n, heap) {
+    // The function returns our impleneted heap stack with the 
+    // value associated with 'n'.
     return heap.pointAddress ({ intValue: n }); 
 }
-
-function makeCons(head, tail, heap) {
+// Set up function for creating 'cons' with a value of 'head, tail and heap'.
+function makeCons (head, tail, heap) {
+   // The returned value proceeds with a function call implementing
+   // our head, tail elements.
    return heap.pointAddress ({ head: head, tail: tail });
 }
+// Set up function to create our uniformed heap.
+// Returns several values which store size, from space, next space, next_to space,
+// and the to_space.
 
-function makeHeap(n, o, next, size, to) {
-  return {
-    size: n,
-    from: new Array(n),
-    next: o,
-    next_to: 0,
-    to: new Array(n),
-  }
-}
-
-function pointAddress (object, object_array, size, next) {
+function alloc (object, object_array, size, next) {
+      // if our next space is smaller and equal to size of heap
       if (next <= size) {
-        // perform allocation
+        // perform allocation of array to object.
         object_array[next] = object;
-        // next ++;
-        return next-1;
+        // next needs to be decremented to resolve our array not pointing
+        // to our desired root object.        
+        return next;
       } else {
         // return failure code like null.
-        console.log('FAILURE');
+        console.log(next);
+        console.log(size);
+        console.log('Failure');
         return null;
       }
-}
+} // end pointAddress
 
+
+function makeHeap (n) {
+  return {
+    size: n,
+    from: new Array(n), // Array for from-space
+    next: 0,
+    next_to: 0,
+    to: new Array(n), // Array for to-space
+
+    pointAddress:  function (o) {
+      return alloc(o, this.from, this.size, this.next++);
+    },
+    
+    pointAddressTo: function (o) {
+      return alloc(o, this.to, this.size, this.next_to++);
+    },
+    
+    heapSwapSpaces: function () {
+      var t = this.from;
+      from = this.to;
+      to = t;
+    }
+  } // end return
+
+} // end makeHeap()
+
+
+// Set up structure of the heap.
+// Simple abstracted representation.
+
+// We first use the makeInt() to create ourselves an integer object.
+// Integer created stores the value 24 and associates itself with the
+// new abstracted heap.
 var z = makeInt(24, heap);
+// Next, we do the same with our makeCons() function however we 
+// add the value of a standard 'null'. Notice how we also tag 'z' which
+// is a variable we are storing our integer in. 
+// 24 -> null
+// null -> 24
 var x = makeCons(z, null, heap);
 
+var f = makeCons(makeInt(42, heap), x, heap);
 
-//x = x.tail;
+var y = makeCons(makeInt(55, heap), f, heap);
+
+
+
+// The criteria for our GC is too target non-reachable objects.
+// Therefore we must delete or cut off some root level association path for one
+// of our objects for the GC to efficiently work. 
+//x = delete x;
 
 
 
@@ -172,19 +220,18 @@ function copyNewSpace(heap, object) {
   // Now copy empty {}
   var newCopiedObject = {};
 
+  // find items in our heap associated objects we have created.
   for (var item in heap.from[object]) {
     if (item != 'address' && item != 'forwardingAddress') {
-          newCopiedObject[item] = heap[object][item];
+          newCopiedObject[item] = heap.from[object][item];
     }
-  
   }
 
   // Now mark the old object as copied:
-  heap[object]['forwardingAddress'] = POINTER;
+  heap.from['forwardingAddress'] = POINTER;
   // Put on the heap (which increases the pointAddress pointer).
-  pointAddress(newCopiedObject, heap.to, heap.size, heap.next_to++);
-
-  return newCopiedObject;
+  // Takes copied object, from heap.to and increments over into next.to.
+  return heap.pointAddressTo(newCopiedObject);
 }
 
 // Now let's set up a function to check if value is an address:
@@ -194,6 +241,27 @@ function copyNewSpace(heap, object) {
 function checkAddress(name, value) {
   return typeof value == 'number' && name != 'address' && name != 'forwardingAddress';
 }
+
+function copy(x, h) {
+
+    // check for special case null object.
+    if ( x == null) {
+        return null;
+    }
+
+    console.log('address: ' + x);
+    var new_x = copyNewSpace(h, x);
+
+    for (f in heap.to[new_x]) {
+        console.log('new address in to space: ' + new_x);
+        if (f !== 'intValue') {
+            copy(heap.to[new_x][f], h);
+        }
+    } 
+    return new_x;
+}
+
+
 
 // ---------------------------------------------------------------------------
 // 3. Start the 'Stop & Copy' GC Phase
@@ -205,60 +273,50 @@ function gc_sc(root, heap) {
   // Therefore, we can do this by assigning our copyNewSpace(INT).
   // Let's copy it to the to-space, by automatically increasing the 
   // allocation pointer, but still keeping the scan pointer at its position.
-  var copy = copyNewSpace(heap, root);
-
-
-  root['forwardingAddress'] = copy['address'];
+  // var copy_ = copyNewSpace(heap, root);
+  // root['forwardingAddress'] = copy_['address'];
 
   // From this, we have now differentiated our scanner and allocation pointers.
   // For now we have only the 'INT' object. During our scanning, we copy all 
   // these sub-objects and mark them as copied too (set the "forwarding address" flag).
 
-  while (SCANNER_POINTER != POINTER) { 
-      // Get the next object within our Scanner pointer:
-      var nextObjectScan = heap[SCANNER_POINTER];
-      // Begin a simple traversal algorithm, checking all its reference properties
-      for (var p1 in nextObjectScan) if (checkAddress(p1, nextObjectScan[p1])) {
-      
-        var address = nextObjectScan[p1]; 
-        // Get the object to which this reference points to:
-          var objectAtAddress = heap[address];
+  var SCANNER = heap.from;
+  console.log('root: ' + root);
 
-          // If that object hasn't been copied yet (i.e. has no forwarding address set)
-          if (!('forwardingAddress' in objectAtAddress)) {
-          // Then we copy this sub-object as well and mark it specifying 'forwardingAddress'.
-          var copiedObjectAtAddress = copyNewSpace(objectAtAddress);
-          // And we also need the pointer value on the scanning object to
-          // refer to the new location.
-          nextObjectScan[p1] = copiedObjectAtAddress.address;
-          } 
-          // Else, the object which this sub-property refers to, was already copied at
-          // some previous scan of some other objects (an object can be referred by many
-          // properties in different objects)
-          else {
-            // Then we just update the pointer to the forwarding address
-            nextObjectScan[p1] = objectAtAddress.forwardingAddress;
-          }
-      }
+  //copy(root, heap);
+  var new_roots = new Array ();
 
-      // And then we move to the next object to scan (the sub-objects which were copied
-      // at scanning of their parent object, and which not scanned yet).
-      heap.SCANNER_POINTER++;
-  }
-    // Now we can swap from-space and to-space, making the to-space our working
-    // runtime memory, and the from-space reserved for GC.
-    for (var k = FROM_SPACE; k < TO_SPACE; k++) {
-      // Just clean old space for the debug purpose. In real practice it's not
-      // necessary, this addresses can be just overridden by later allocations.
-      delete heap[k];
+  for (var i = 0; i < root.length; i++) {
+      new_roots.push(copy(root[i], heap));
   }
 
-    // Store our five live objects
-    var storeAll = TO_SPACE;
-    // Reset = 0 objects
-    TO_SPACE = FROM_SPACE;
-    // Reset = 5 objects
-    FROM_SPACE = storeAll;
+
+  // while (SCANNER < heap.size) {
+
+  //           // Get the object to which this reference points to:
+  //           var objectAtAddress = heap[address];
+
+  //           // If that object hasn't been copied yet (i.e. has no forwarding address set)
+  //           if (!('forwardingAddress' in objectAtAddress)) {
+  //           // Then we copy this sub-object as well and mark it specifying 'forwardingAddress'.
+  //           var copiedObjectAtAddress = copyNewSpace(objectAtAddress);
+  //           // And we also need the pointer value on the scanning object to
+  //           // refer to the new location.
+  //           nextObjectScan[p1] = copiedObjectAtAddress.address;
+  //         } 
+  //         // Else, the object which this sub-property refers to, was already copied at
+  //         // some previous scan of some other objects (an object can be referred by many
+  //         // properties in different objects)
+  //         else {
+  //           // Then we just update the pointer to the forwarding address
+  //           nextObjectScan[p1] = objectAtAddress.forwardingAddress;
+  //         }
+  // }
+
+    // Now let us store and reset spaces.
+    heap.heapSwapSpaces();
+
+    return new_roots;
 
 } // End gc_sc();
 
@@ -305,14 +363,26 @@ function objectToString(object) {
 // Let's show some implementated results:
 //console.log('HEAP BEFORE GC_SC:' + '\n\n', objectToString(heap));
 
-
 // Now let's run the GC algorithm:
+
+// 
+console.log('HEAP BEFORE GC:');
+
+for (var k = 0; k < heap.size; k++) {
+    console.log(heap.from[k]);
+}
 
 console.log('PERFORM GC_SC ALGORITHM: gc_sc(x, heap);');
 
-gc_sc(x, heap);
-
 console.log('RESULTS:');
+
+gc_sc([f], heap);
+
+
+
+//console.log(gc_sc(x, heap));
+
+
 
 // Now let's show some implemented results with the GC algorithm:
 // Notice, that the address of 'BOOL_' object in the 'INT' is correctly
@@ -359,36 +429,47 @@ console.log('RESULTS:');
 // NOTE TO SELF: Am I right in thinking that I need too run the gc_sc function 
 // within each G_0, G_1, G_2 etc.
 
-function generation(object, array) {
-  // Pull elements from heap and push into our array.
-  if (typeof(object) == "object") {
-      for (item in object) {
-         // Segment our heap items.
-          for (var i = 0; i < item.length;)
-              // Then for each item push into array
-              i++;
-              array[item] = object[item];
+// function genHeaps() {
+//   var heaps = {};
+//   return object[];
+// }
 
-            // Rather than iterate over object 'o'
-            // Say, for each object 'reachable o' in G_0 
-            // copy(o) into G_1
+//  function createNextHeap(n)  {
+//     this.heaps.push(makeHeap(n));
+// }
 
-            // G_1.alloc()
+// function generation(object, array) {
+//   // Pull elements from heap and push into our array.
+//   if (typeof(object) == "object") {
+//       for (item in object) {
+//          // Segment our heap items.
+//           for (var i = 0; i < item.length;)
+//               // Then for each item push into array
+//               i++;
+//               array[item] = object[item];
 
-            // if (o in pset) {
-                // continue
-              // }
-            // for (m in o) {
-              // o'[m] = o[m];
-            // }
+//             // Rather than iterate over object 'o'
+//             // Say, for each object 'reachable o' in G_0 
+//             // copy(o) into G_1
+
+//             // G_1.alloc()
+
+//             // if (o in pset) {
+//             // continue
+//             // }
+            
+//             // for (m in o) {
+//             // o'[m] = o[m];
+//             // }
+//           }
+//       };
+//     // Return our array
+//     return array;
+// }
 
 
+// generation(h, heaps, index);
 
-          }
-      };
-    // Return our array
-    return array;
-}
 
 // ---------------------------------------------------------------------------
 // 6. Generation Tests and Promotion
