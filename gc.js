@@ -24,20 +24,20 @@
 // and because of infant mortality most objects die there. When the young 
 // generation fills up it causes a minor collection. Minor collections can be
 // optimized assuming a high infant mortality rate. However, as you will find, 
-// there are some missing functionality from the code which enables our GC 
+// there is some missing functionality from the code which enables our GC 
 // algorithm to promote objects into various n++ generation spaces. (G0 -> Gn)...
-// To put the following program into perspective, first the program should use 
-// some simple heap structure, memory, allocation and object referencing 
-// functions. These can then be broken into two generations: 'from-space' and 
-// the 'to-space'. 
+// To put the following program into perspective, first the first half of the 
+// program should use some simple heap structure, memory, allocation and object
+//  referencing functions. These can then be broken into two generations: 
+// 'from-space' and the 'to-space'. 
 
 // The 'to-space': Most of the newly created objects are located here. 
 // The 'from-space': Objects that did not become unreachable / survived the 
-// to-space are copied here. When objects disappear from the to-space, we say a
-// 'minor GC' has occurred. When objects disappear from the old generation: we 
+// to-space are copied here. When objects disappear from the 'to-space', we say a
+// 'minor GC' has occurred. When objects disappear from the 'from-space': we 
 // say a 'major GC' (or a 'full GC') has occurred. There are a number of different
 // algorithms that incrementally perform this procedure. For example, the 
-// traditional 'mark and sweep' algorithm, however this lacksany generational 
+// traditional 'mark and sweep' algorithm, however this lacks any generational 
 // procedure. Rather the algorithm, uses traversing methods over unreachable and 
 // reachable objects in the heap. This is known as the 'marking phase', - 
 // subsequently, the 'sweep' phase occurs soon after. Sweeping takes all the 
@@ -51,12 +51,12 @@
 // ---------------------------------------------------------------------------
 
 // Firstly, we must establish our 'heap', which will contain several uniformed 
-// 'boxed' elements. We can pull out elements from the ARC program. ARC is used
-// as a simple technique of storing the number of references, pointers, or 
-// handles to a resource such as an object, block of memory, disk space or other
-// resource. Essentially, we need somewhere to store our objects and references. 
-// Each address at which an object is stored will be located inside our heap 
-// array below.
+// 'boxed' elements. We can pull out elements from the ARC (Reference Counting) 
+// program. ARC is used as a simple technique of storing the number of 
+// references, pointers, or handles to a resource such as an object, block of 
+// memory, disk space or other resource. Essentially, we need somewhere to store
+// our objects and references. Each address at which an object is stored will 
+// be located inside our heap array below.
 
 var heap = makeHeap(20); // heap of size 20
 
@@ -88,12 +88,12 @@ function pointAddress(object) {
 }
 
 // Now we can implement our heap divisions. The heap is divided into two spaces 
-// for our objects to be assigned in. The from-space or 'old generation' is 
+// for our objects to be assigned in. The 'from-space' or 'old generation' is 
 // where our currently reachable objects live. The 'to-space' or 'young generation'
 // in contrast is initially reserved for GC needs. First half (0-9 indices) is 
 // 'from-space', the second half (indices 10-19) is the 'to-space'.
 
-// Set up two variables for the two generational divisions and their indices.
+// Set up two variables for the two space divisions and their indices.
 // Reasons for doing this are because: In many programs, recently created 
 // objects are also most likely to become unreachable incredibly quicker than
 // first thought. This is known as the infant mortality or the generational 
