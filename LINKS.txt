@@ -1,19 +1,7 @@
-/**
+/*
+ *
  * Generational Garbage Collection technique:
  *
- * - JavaScript GC Methods:
- * - Reference Counting (ARC) https://gist.github.com/DmitrySoshnikov/4646658
- * - Stop and Copy GC: https://gist.github.com/DmitrySoshnikov/4736334
- * - Non-recursive DFS and BFS: https://gist.github.com/DmitrySoshnikov/63f9acfac4651da5d21f
- * 
- * - Research Papers:
- * - Generation Scavenging Algorithm by Ungar: http://www.cs.utexas.edu/users/mckinley/395Tmm-2003/talks/Ungar.pdf
- * - Incremental, Generational Mostly-Copying GC: http://www.hpl.hp.com/techreports/Compaq-DEC/WRL-91-8.pdf
- * - A tour of the V8 GC engine: http://jayconrod.com/posts/55/a-tour-of-v8-garbage-collection
- * - Garbage Collection Algorithms - http://courses.cs.washington.edu/courses/csep521/07wi/prj/rick.pdf
- *
- * - Other Various Resources:
- * - Memory Reference management: http://www.memorymanagement.org/glossary/g.html
- * - Garbage Collection Methods : http://www.cs.princeton.edu/courses/archive/spr96/cs441/notes/l14.html
- *
- */
+*/
+
+Byers, R. (2007). Garbage Collection Algorithms. Washington D.C: University of Washington.Conrod, J. (2009, September 23). A tour of V8 Garbage Collection. Retrieved November 25, 2009, from Jay Conrod: http://jayconrod.com/posts/55/a-tour-of-v8-garbage-collectionCOS 441 - Garbage Collection Methods - April 2, 1996. (1996, April 02). Retrieved November 25, 2015, from Princeton University: http://www.cs.princeton.edu/courses/archive/spr96/cs441/notes/l14.htmlManagement, M. (2015, September 01). Memory Management: Glossary: G. Retrieved November 22, 2015, from Memory Management: http://www.memorymanagement.org/glossary/g.htmlMay Yip, G. (1991). Incremental, Generational Mostly-Copying Garbage Collection in Uncooperative Environments. Palo Alto, California: Western Research Laborator.Soshnikov, D. (2013, October 19). Non-recursive DFS and BFS. Retrieved November 22, 2015, from GitHub: https://gist.github.com/DmitrySoshnikov/63f9acfac4651da5d21fSoshnikov, D. (2013, January 27). Reference Counting (ARC). Retrieved November 21, 2015, from GitHub: https://gist.github.com/DmitrySoshnikov/4646658Soshnikov, D. (2013, Feburary 08). Stop and Copy GC. Retrieved November 20, 2015, from GitHub: https://gist.github.com/DmitrySoshnikov/4736334Ungar, D. (2003). Generation Scavenging A Non - Disruptive High Performance Storage Algorithm. Department of Electrical Engineering and Computer Sciences. University of California, Berkeley.
