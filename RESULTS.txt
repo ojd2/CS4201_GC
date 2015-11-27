@@ -1,0 +1,53 @@
+
+/** Module: CS4201 **/ 
+
+/** Assignment 2: **/
+
+FIRST HEAP BEFORE GC:
+
+{"intValue":10}
+{"head":0,"tail":null}
+{"intValue":2}
+{"head":2,"tail":1}
+{"intValue":4}
+{"head":4,"tail":3}
+{"intValue":6}
+{"head":6,"tail":5}
+{"intValue":8}
+{"head":8,"tail":7}
+{"intValue":12}
+{"head":10,"tail":9}
+8
+undefined
+
+
+FIRST PERFORM GC_SC ALGORITHM: gc_sc([f], heap);
+
+HEAP AFTER GC:
+
+root: 3
+
+
+SECOND HEAP BEFORE GC:
+
+{"intValue":10}
+{"head":0,"tail":null}
+{"intValue":2}
+{"head":2,"tail":1}
+{"intValue":4}
+{"head":4,"tail":3}
+{"intValue":6}
+{"head":6,"tail":5}
+{"intValue":8}
+{"head":8,"tail":7}
+{"intValue":12}
+{"head":10,"tail":9}
+8
+undefined
+
+
+PERFORM GC_SC ALGORITHM: gc_sc([j], heap);
+
+SECOND HEAP AFTER GC:
+
+root: 9

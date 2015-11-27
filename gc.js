@@ -522,4 +522,15 @@ gc_sc([j], heap);
 // [     genHeaps()     ->  ||  -> createNextHeap(n)   ->  ||  ->   generation()    ]
 
 // My overall understanding seemed to be initially correct, however my lack of pure functional
-// programming experience let me down on the last hurdle. 
+// programming experience let me down on the last hurdle. In hinsight, using the 'stop-and-copy'
+// GC algorithm was an interesting algorithm to program. It has a more complicated allocation 
+// process when compared with the traditional 'mark-and-sweep'. The algorithm has a running time
+// that is O(R), R = reachable, and it reclaims memory by moving reachable storage to another
+// 'space' in memory. The idea was to abstractly represent these transitions of 'space' in memory,
+// however it turned out that too much abstraction created errors. I had difficulty 
+// when trying to implement a generational approach, mainly because I could not find a successful 
+// mechanisim for 'copying' and tracking 'reduced storage amounts' over several 'n++' spaces.
+
+// 'Stop-and-copy' is considered the faster GC algorithm. We do not have to worry about the
+// post traversal over any 'n++' heap to reduce and clear data. Which is a great relief, however it would 
+// of been interesting to view the runtime if the model had a more distinct generational collection routine.
