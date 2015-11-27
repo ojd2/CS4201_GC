@@ -17,7 +17,7 @@
 // I. Overall Goal For Our Generational Garbage Collection Program
 // ---------------------------------------------------------------------------
 
-// To optimize this algorithm, the idea is for memory to be managed in 
+// To optimize this algorithm, the idea was for memory to be managed in 
 // generations which simply holds various objects of different ages. Garbage 
 // collection occurs in each generation when the generation fills up. Objects 
 // are allocated in a generation for younger objects or the young generation, 
@@ -36,14 +36,14 @@
 // to-space are copied here. When objects disappear from the to-space, we say a
 // 'minor GC' has occurred. When objects disappear from the old generation: we 
 // say a 'major GC' (or a 'full GC') has occurred. There are a number of different
-// algorithms that incrementally perform this proceedure. For example, the 
+// algorithms that incrementally perform this procedure. For example, the 
 // traditional 'mark and sweep' algorithm, however this lacksany generational 
-// proceedure. Rather the algorithm, uses traversing methods over unreachable and 
+// procedure. Rather the algorithm, uses traversing methods over unreachable and 
 // reachable objects in the heap. This is known as the 'marking phase', - 
 // subsequently, the 'sweep' phase occurs soon after. Sweeping takes all the 
 // unreachable objects and assigns them too an empty space. Other various 
-// algorthims have derived from 'mark and sweep', such as the 'Stop and Copy' 
-// algorithm this program is dervived from.
+// algorithms have derived from 'mark and sweep', such as the 'Stop and Copy' 
+// algorithm this program is derived from.
 
 
 // ---------------------------------------------------------------------------
@@ -87,11 +87,11 @@ function pointAddress(object) {
   return object;
 }
 
-// Now we can implment our heap divisions. The heap is divided into two spaces 
+// Now we can implement our heap divisions. The heap is divided into two spaces 
 // for our objects to be assigned in. The from-space or 'old generation' is 
-// where our currently reachable objects live. The to-space or 'young generation'
+// where our currently reachable objects live. The 'to-space' or 'young generation'
 // in contrast is initially reserved for GC needs. First half (0-9 indices) is 
-// from-space, the second half (indices 10-19) is the to-space.
+// 'from-space', the second half (indices 10-19) is the 'to-space'.
 
 // Set up two variables for the two generational divisions and their indices.
 // Reasons for doing this are because: In many programs, recently created 
@@ -136,13 +136,13 @@ function alloc (object, object_array, size, next) {
       }
 } // End pointAddress()
 
-// Our makeHeap() function denotes several internal functions which subsquently
+// Our makeHeap() function denotes several internal functions which subsequently
 // allocate several functional operations. The idea of this is to enable 
-// flexibilty, extending our uniformed heap structure beyond just some global 
+// flexibility, extending our uniformed heap structure beyond just some global 
 // elements.
 
 // The function passes the variable of 'n', which is used to allocate a dynamic 
-// heap size for our simple array structure intiated futher above on line 43.
+// heap size for our simple array structure initiated further above on line 43.
 // The function returns a number of helper 'tags' which helps create our 
 // 'from-space' and our 'to-space', with an additional 'next_to' space. 
 // The 'next_to' space stores our objects after they leave the nursery, before 
@@ -151,7 +151,7 @@ function alloc (object, object_array, size, next) {
 // [      Old Space        ||  {2}, {4}  |    To Space    ] 
 // [      Old Space        ||   Next To  |    To Space    ] 
 
-// Note: Remember that our 'n' resembles an abstract representation of our 
+// Note: Remember that our 'n' resembles an abstract representation of the 
 // dynamic heap and the number of heap elements. This is why 'n' is passed in 
 // our return elements 'size', 'from' and 'to' because we want the heap space 
 // to capture and assign all of our dynamic elements added onto the stack. 
@@ -198,7 +198,7 @@ function makeHeap (n) {
 
 // We first use the makeInt() to create ourselves an integer object. Integer 
 // created stores the value 10 and associates itself with the new abstracted 
-// heap. This allows us to create a more 'uniformed' representation of our 
+// heap. This allows us to create a more 'uniformed' representation of the 
 // abstracted heap elements.
 var z = makeInt(10, heap);
 // Next, we do the same with our makeCons() function however we add the value 
@@ -209,7 +209,7 @@ var z = makeInt(10, heap);
 // x: {null} <- z: {10}
 
 // This particular functional assignment is continued for other various elements. 
-// These are subsequentyl passed along with our 'heap' variable and added onto 
+// These are subsequently passed along with our 'heap' variable and added onto 
 // our stack representation.
 var x = makeCons(z, null, heap);
 var f = makeCons(makeInt(2, heap), x, heap);
@@ -217,13 +217,14 @@ var y = makeCons(makeInt(4, heap), f, heap);
 var k = makeCons(makeInt(6, heap), y, heap);
 var j = makeCons(makeInt(8, heap), k, heap);
 var m = makeCons(makeInt(12, heap), j, heap);   
+
 // The criteria for our GC is too target non-reachable objects. 
-// Therefore we must cut off some root level association path for one
+// Therefore, we must cut off some root level association path for one
 // of our objects for the GC to efficiently work. This is called further down
 // in the code where we call our GC algorithm: gc_sc();
 
 // ---------------------------------------------------------------------------
-// 2. Stop and Copy GC, Fixing Pointer Issue & Fowarding Pointers
+// 2. Stop and Copy GC, Fixing Pointer Issue & Forwarding Pointers
 // ---------------------------------------------------------------------------
 
 // In this moving Stop and Copy GC, all memory is divided into a 'from-space' 
@@ -236,7 +237,7 @@ var m = makeCons(makeInt(12, heap), j, heap);
 // Bit-for-bit inclusion would enable us to assign more detailed references.
 // Because of this, there would be copying issues. As our abstract representation 
 // does not cater for more precise references, therefore some properties of 
-// objects may be referencing to other objects. This is unfortunatley one of the
+// objects may be referencing to other objects. This is unfortunately one of the
 // pitfalls when trying to implement a strict GC in JavaScript, other languages 
 // such as C++ would potentially provide more concrete implementation techniques.
 
@@ -285,13 +286,17 @@ function copyNewSpace(heap, object) {
 }
 
 // Now let's set up a function to check if 'value' is an 'address' marker.
-// For abstraction the function and algorithm usees simplified versioning.
+// For abstraction the function and algorithm uses simplified versioning.
 // We take the address in the heap array using its index (which are numbers). 
 // E.G. address = 1.
 function checkAddress(name, value) {
   return typeof value == 'number' && name != 'address' && name != 'forwardingAddress';
 }
 
+// Our copy function, this is a very important mechanism in the overall 
+// functionality of the program. This is our secret weapon and what we use
+// to copy and assign reachable and unreachable objects from one space to 
+// another.
 function copy(x, h) {
      // Important: We need a special marker checker for any
      // of our special 'null' objects.
@@ -318,13 +323,13 @@ function copy(x, h) {
 }
 
 // ---------------------------------------------------------------------------
-// 3. Start The Abstracted 'Stop & Copy' GC Algorthim
+// 3. Start The Abstracted 'Stop & Copy' GC Algorithm
 // ---------------------------------------------------------------------------
 
 // Firstly, we must copy 'root' objects to the new space. 
 // We only have one reachable object here and that is the 'root' object.
 // Therefore, we can do this by assigning our gc_sc(root). Nevertheless,
-// we also need to pass our functional 'heap' variable which allows our 
+// we also need to pass our functional 'heap' variable which allows the 
 // GC algorithm (derived 'stop-and-copy') over our abstract heap structure.
   
 // Let's copy it to the 'to-space', by automatically creating a simple for loop
@@ -333,13 +338,13 @@ function copy(x, h) {
 
 function gc_sc(root, heap) {
   // From this, we have now differentiated our scanner and allocation pointers.
-  // Our scanner now points to our 'from-space' heap. For now we have only the 
+  // Our scanner now points to our 'from-space' heap. For now, we have only the 
   // 'root' object. During our scanning, we copy all these sub-objects and mark 
   // them as copied as well.
 
   // This is done by pushing our 'form-space' objects to the 'new_roots' empty 
-  // array. Reasons, for doing this are because we need to keep track of our 
-  // 'root' objects when swaping objects over spaces. If this was not implemented 
+  // array. Reasons, for doing this are because we need to keep track of the 
+  // 'root' objects when swapping objects over spaces. If this was not implemented 
   // below, our function would fail because it would not be able to keep track of 
   // reassignment in one space to another. Further down the line, this became an 
   // issue for trying to implement the generational promotion functions. 
@@ -401,7 +406,7 @@ gc_sc([j], heap);
 // We need a mechanism to copy the live data of one region of memory to a 
 // contiguous group of records in another region.
 
-// Strict 'stop-and-copy' requires copying every live object from the source 
+// Concrete 'stop-and-copy' requires copying every live object from the source 
 // heap to a new heap before you could free the old one, which translates 
 // to lots of memory. With blocks, the GC can typically use dead blocks to 
 // copy objects to as it collects. Each block has a generation count to keep
@@ -409,7 +414,7 @@ gc_sc([j], heap);
 // since the last GC are compacted; all other blocks get their generation 
 // count bumped if they have been referenced from somewhere. 
 
-// This handles the idea of lots of short-lived temporary objects. Periodically,
+// This handles the idea of short-lived temporary objects. Periodically,
 // a full sweep is made - large objects are still not copied (just get their 
 // generation count bumped) and blocks containing small objects are copied and
 // compacted. 
@@ -424,8 +429,8 @@ gc_sc([j], heap);
 // JOINING TOGETHER VARIOUS GENERATIONAL FUNCTIONS BELOW BUT WAS NOT USED.
 // ---------------------------------------------------------------------------
 
-// 1 - Take objects of simillar age. (Current state of heap).
-// 2 - Objects containing simillar age : our first heap.
+// 1 - Take objects of similar age. (Current state of heap).
+// 2 - Objects containing similar age : our first heap.
 // 3 - Divide, objects, add to a generational space recursively.
 // 4 - Perform GC_SC algorithm, with each result, add to a new space.
 
@@ -446,8 +451,8 @@ gc_sc([j], heap);
 // var G_1 = {};
 // var G_2 = {};
 
-// However, it seems as though the functional approach would of been more easier
-// to implement and it would allow us to adapt to mutliple 'n++'' generation 
+// However, it seems as though the functional approach would of been easier
+// to implement and it would allow us to adapt to multiple 'n++'' generation 
 // heaps. G0... -> Gn
 
 // Starting off, the idea was to have a function which created an empty 
@@ -460,7 +465,7 @@ gc_sc([j], heap);
 //   return object[];
 // }
 
-// Next the idea was to have a function which would subsequently push our 
+// Next the idea was to have a function which would subsequently push the 
 // initial heap representation (using the 'makeHeap') function. This heap would 
 // be pushed into the empty 'heaps' array we initiated above in the genHeaps() 
 // function. The function would take the 'n' variable as it would push per heap.  
@@ -472,7 +477,7 @@ gc_sc([j], heap);
 // }
 
 // Finally, we needed generation function which takes the 'heaps' array and 
-// it's current associated objects. Inside this function, it simply looks for
+// its current associated objects. Inside this function, it simply looks for
 // objects in a desired array. The idea for this function was for it to connect
 // the dots together and act as a promotional anchor for our generalised 
 // GC routine.
@@ -519,13 +524,13 @@ gc_sc([j], heap);
 // II. Conclusion And Overall Summary
 // ---------------------------------------------------------------------------
 
-// Although the generational aspect of the GC routine is abscent, it was easier
+// Although the generational aspect of the GC routine is absent, it was easier
 // to describe a potential working algorithm for implementing the generational 
 // promotions than programming a fix. It seems as though the program was 
-// incredibly close to fulfilling the generational promotion mechanisim. 
+// incredibly close to fulfilling the generational promotion mechanism. 
 
 // Reasons for not being able to successfully implement the generational 
-// promotion is because the generation() function does not provide an addaptive 
+// promotion is because the generation() function does not provide an adaptive 
 // solution for an arbitrary amount of generation promotions. Although the heap 
 // implementation enables the program to cope for this, there was significant 
 // difficulty in designing an efficient bridge between the waterfall of 
@@ -537,14 +542,14 @@ gc_sc([j], heap);
 
 // My overall understanding seemed to be initially correct, however my lack of
 // pure functional programming experience let me down on the last hurdle. 
-// In hinsight, using the 'stop-and-copy' GC algorithm was an interesting 
+// In hindsight, using the 'stop-and-copy' GC algorithm was an interesting 
 // algorithm to program. It has a more complicated allocation process when 
 // compared with the traditional 'mark-and-sweep'. The algorithm has a running 
 // time that is O(R), R = reachable, and it reclaims memory by moving reachable 
 // storage to another 'space' in memory. The idea was to abstractly represent 
 // these transitions of 'space' in memory, however it turned out that too much
 // abstraction created errors. I had difficulty when trying to implement a 
-// generational approach, mainly because I could not find a successful mechanisim
+// generational approach, mainly because I could not find a successful mechanism
 // for 'copying' and tracking 'reduced storage amounts' over several 'n++' spaces.
 
 // 'Stop-and-copy' is considered the faster GC algorithm. We do not have to worry
