@@ -573,7 +573,7 @@ pure functional programming experience let me down on the last hurdle.
 In hindsight, using the stop-and-copy GC algorithm was an interesting 
 algorithm to program. It has a more complicated allocation process when 
 compared with the traditional mark-and-sweep. The algorithm has a running 
-time that is O(R), R = reachable, and it reclaims memory by moving reachable 
+time that is `O(R), R = reachable`, and it reclaims memory by moving reachable 
 storage to another space in memory. The idea was to abstractly represent 
 these transitions of space in memory, however it turned out that too much
 abstraction created errors. I had difficulty when trying to implement a 
