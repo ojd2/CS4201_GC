@@ -35,7 +35,7 @@ traditional mark and sweep algorithm, however this lacks any generational
 procedure. Rather the algorithm, uses traversing methods over unreachable and 
 reachable objects in the heap. This is known as the marking phase, - 
 subsequently, the sweep phase occurs soon after. Sweeping takes all the 
-unreachable objects and assigns them too an empty space. Other various algorithms have derived from mark and sweep, such as the Stop and Copy algorithm this program is derived from.
+unreachable objects and assigns them to an empty space. Other various algorithms have derived from mark and sweep, such as the Stop and Copy algorithm this program is derived from.
 
 
 
@@ -231,7 +231,7 @@ var j = makeCons(makeInt(8, heap), k, heap);
 var m = makeCons(makeInt(12, heap), j, heap);   
 ```
 
-The criteria for our GC is too target non-reachable objects. 
+The criteria for our GC is to target non-reachable objects. 
 Therefore, we must cut off some root level association path for one
 of our objects for the GC to efficiently work. This is called further down
 in the code where we call our GC algorithm: `gc_sc();`
@@ -279,7 +279,7 @@ abstractly within our GC function and algorithm.
 
 `POINTER = TO_SPACE;`
 
-And the Scanner pointer is set initially here too:
+And the Scanner pointer is set initially here:
 
 `var SCANNER_POINTER = POINTER;`
 
